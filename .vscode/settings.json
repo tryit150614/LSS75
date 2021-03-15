@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "adc.h": "c",
+        "gpio.h": "c",
+        "stm32l4xx_ll_iwdg.h": "c",
+        "ringbuffer1.h": "c",
+        "cstdio": "c",
+        "serialhandlers.h": "c",
+        "rtc.h": "c",
+        "time.h": "c",
+        "stdio.h": "c",
+        "limits": "c",
+        "type_traits": "c",
+        "cstdlib": "c",
+        "fsm_nbiot.h": "c",
+        "st_watchdog.h": "c"
+    }
+}
