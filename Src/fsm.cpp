@@ -53,31 +53,29 @@ extern EEPROMFlag eepromFlag;
 extern Rtc rtc;
 
 /* Payload */
-uint32_t protocolID = 26;
+uint32_t protocolID = 30;
 char     soilTemp[20]      = "0.00";
 char     soilVWC [20]      = "0";
 char     soilEC  [20]      = "0.00";
 char     soilPH  [20]      = "0.00";
 char     airT [20]         = "0.00";
 char     airH[20]          = "0.00";
-char     newData[250]             = {0};
+char     solra [10]           = "0";
+char     waterDepth [10]      = "0";
+char     sunRadiation[10]     = "0";
+char     windSpeed [10]       = "0";
+char     leafH  [10]          = "0";
+char     leafT  [10]          = "0";
+char     newData[256+1]           = {0};
 char     readySendData[10500+1]   = {0};
 uint32_t amountOfData     = 0;
 uint32_t tempTimestamp    = 0;
-// char socket;
+
 char connectIP[] = "\"35.187.150.128\"";
 char connectPort[] = "80";
 char connectPath[100] = "\"/api/6th-nbiot\"";
-// char connectIP[] = "\"220.135.180.70\"";
-// char connectPort[] = "80";
-// char connectPath[100] = "\"http://xlab.agriweather.online/turtwig/api/6th-nbiot\"";
 char signalPower[3] = {0};
 //////////////////////////////
-
-/* Test */
-// uint32_t debug_start = 0;
-// uint32_t debug_end = 0;
-///////
 
 struct FSMAttributes fsmAttributes;
 Watchdog dog;
@@ -88,6 +86,12 @@ static char rs485Data_Soil_2[11 * 2 + 1] = {0};
 static char rs485Data_PH[9 * 2 + 1]      = {0};
 static char rs485Data_PH_2[7 * 2 + 1]    = {0};
 static char rs485Data_Air[11 * 2 + 1]    = {0};
+static char rawData_Solar[7 * 2 + 1]     = {0};
+static char rawData_Waterdepth[7 * 2 + 1]= {0};
+static char rawData_SR[7 * 2 + 1]        = {0};
+static char rawData_WS[7 * 2 + 1]        = {0};
+static char rawData_WS_2[7 * 2 + 1]      = {0};
+static char rawData_Leaf[9 * 2 + 1]      = {0};
 static char batV[10] = {0}, solarV[10]   = {0}, innerT[10] = {0};
 static uint8_t loraResendCount  = 0;
 // static uint8_t sendSuccessCount = 0;
@@ -184,13 +188,26 @@ funcptr fsm_getRS485Data()
   memset(rs485Data_Soil, 0, sizeof(rs485Data_Soil));
   memset(rs485Data_Soil_2, 0, sizeof(rs485Data_Soil_2));
   memset(rs485Data_PH, 0, sizeof(rs485Data_PH));
+  memset(rs485Data_PH_2, 0, sizeof(rs485Data_PH_2));
   memset(rs485Data_Air, 0, sizeof(rs485Data_Air));
+  memset(rawData_Solar, 0, sizeof(rawData_Solar));
+  memset(rawData_Waterdepth, 0, sizeof(rawData_Waterdepth));
+  memset(rawData_SR, 0, sizeof(rawData_SR));
+  memset(rawData_WS, 0, sizeof(rawData_WS));
+  memset(rawData_WS_2, 0, sizeof(rawData_WS_2));
+  memset(rawData_Leaf, 0, sizeof(rawData_Leaf));
 
-  uint8_t soilSensor_array[8]    = {0x01,0x04,0x00,0x00,0x00,0x03,0xB0,0x0B};
-  uint8_t PHSensor_array[8]      = {0x02,0x04,0x00,0x00,0x00,0x02,0x71,0xF8};
-  uint8_t soilSensor_2_array[8]  = {0x03,0x03,0x00,0x00,0x00,0x03,0x04,0x29}; /* Laytion sensor */
-  uint8_t airSensor_array[8]     = {0x04,0x04,0x00,0x00,0x00,0x03,0xB0,0x5E};
-  uint8_t PHSensor_2_array[8]    = {0x05,0x03,0x00,0x00,0x00,0x01,0x85,0x8E}; /* Laytion sensor */
+  uint8_t soilSensor_array[8]       = {0x01,0x04,0x00,0x00,0x00,0x03,0xB0,0x0B};
+  uint8_t PHSensor_array[8]         = {0x02,0x04,0x00,0x00,0x00,0x02,0x71,0xF8};
+  uint8_t soilSensor_2_array[8]     = {0x03,0x03,0x00,0x00,0x00,0x03,0x04,0x29}; /* Laytion sensor */
+  uint8_t airSensor_array[8]        = {0x04,0x04,0x00,0x00,0x00,0x03,0xB0,0x5E};
+  uint8_t PHSensor_2_array[8]       = {0x05,0x03,0x00,0x00,0x00,0x01,0x85,0x8E}; /* Laytion sensor */
+  uint8_t SolarSensor_array[8]      = {0x06,0x03,0x00,0x00,0x00,0x01,0x85,0xBD}; /* Laytion sensor */
+  uint8_t waterDepthSensor_array[8] = {0x07,0x03,0x00,0x00,0x00,0x01,0x84,0x6C}; /* Laytion sensor */
+  uint8_t sunRadiation_array[8]     = {0x08,0x04,0x00,0x00,0x00,0x01,0x31,0x53}; /* Infwin sensor */
+  uint8_t windSpeed_array[8]        = {0x10,0x03,0x00,0x00,0x00,0x01,0x87,0x4B}; /* PRS sensor */
+  uint8_t windSpeed_array2[8]       = {0x19,0x03,0x00,0x00,0x00,0x01,0x87,0xD2}; /* Laytion sensor */
+  uint8_t leaf_array[8]             = {0x20,0x03,0x00,0x00,0x00,0x01,0x87,0x4B}; 
 
   powerOnRS485Sensor();
   rs485Flag = true;
@@ -209,11 +226,23 @@ funcptr fsm_getRS485Data()
   getRS485Data(rs485Data_PH_2, 7);
   transmitRS485(soilSensor_array);
   getRS485Data(rs485Data_Soil, 11);
+  transmitRS485(SolarSensor_array);
+  getRS485Data(rawData_Solar, 7);
+  transmitRS485(waterDepthSensor_array);
+  getRS485Data(rawData_Waterdepth, 7);
+  transmitRS485(sunRadiation_array);
+  getRS485Data(rawData_SR, 7);
+  transmitRS485(windSpeed_array);
+  getRS485Data(rawData_WS, 7);
+  transmitRS485(windSpeed_array2);
+  getRS485Data(rawData_WS_2, 7);
+  transmitRS485(leaf_array);
+  getRS485Data(rawData_Leaf, 9);
 
   powerOffRS485Sensor();
 
   if(strnlen(rs485Data_Soil, sizeof(rs485Data_Soil)) == 0){
-    writeString(DEBUG_USART, "Soil senser doesn't get data.\r\n");
+    writeString(DEBUG_USART, "Soil senser : N/A\r\n");
     memset(soilTemp, 0, 20);
     memset(soilVWC, 0, 20);
     memset(soilEC, 0, 20);
@@ -237,7 +266,7 @@ funcptr fsm_getRS485Data()
       sprintf(soilTemp, "%lu.%02lu", tempST / 100, tempST % 100);
     }
     else {
-      sprintf(soilTemp, "-%lu.%02lu", (65536 - tempST) / 100, (65536 - tempST) % 100);
+      sprintf(soilTemp, "-%lu.%02lu", (65536 - tempST + 1) / 100, (65536 - tempST + 1) % 100);
     }
     DEBUG("SoilTemp : ");DEBUG(soilTemp);DEBUG("\r\n");
 
@@ -263,7 +292,7 @@ funcptr fsm_getRS485Data()
   }
 
   if(strnlen(rs485Data_PH, sizeof(rs485Data_PH)) == 0){
-    writeString(DEBUG_USART, "PH senser doesn't get data.\r\n");
+    writeString(DEBUG_USART, "PH senser : N/A\r\n");
     memset(soilPH, 0, 20);
     memcpy(soilPH, "0.00", 4);
   }
@@ -283,57 +312,55 @@ funcptr fsm_getRS485Data()
     DEBUG("Soil PH : ");DEBUG(soilPH);DEBUG("\r\n");
   }
   
-  if(strnlen(rs485Data_Soil, sizeof(rs485Data_Soil)) == 0) {
-    if(strnlen(rs485Data_Soil_2, sizeof(rs485Data_Soil_2)) == 0){
-      writeString(DEBUG_USART, "Soil_2 senser doesn't get data.\r\n");
+  if(strnlen(rs485Data_Soil_2, sizeof(rs485Data_Soil_2)) == 0){
+    writeString(DEBUG_USART, "Soil_2 senser : N/A\r\n");
+  }
+  else {
+    writeString(DEBUG_USART, "Soil_2 sensor data : ");
+    writeString(DEBUG_USART, rs485Data_Soil_2);
+    writeString(DEBUG_USART, "\r\n");
+
+    /* Soil temp */
+    memset(soilTemp, 0, sizeof(soilTemp));
+    char tempSoilTemp[20] = {0};
+    uint32_t tempST = 0;
+
+    memcpy(tempSoilTemp, rs485Data_Soil_2 + 6, 4);
+    tempST = (uint32_t)strtol(tempSoilTemp, NULL, 16);
+    if(tempST < 10000) {
+      // 235 -> 23.50
+      sprintf(soilTemp, "%lu.%02lu", tempST / 10, tempST % 10 * 10);
+      DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
     }
     else {
-      writeString(DEBUG_USART, "Soil_2 sensor data : ");
-      writeString(DEBUG_USART, rs485Data_Soil_2);
-      writeString(DEBUG_USART, "\r\n");
-
-      /* Soil temp */
-      memset(soilTemp, 0, sizeof(soilTemp));
-      char tempSoilTemp[20] = {0};
-      uint32_t tempST = 0;
-
-      memcpy(tempSoilTemp, rs485Data_Soil_2 + 6, 4);
-      tempST = (uint32_t)strtol(tempSoilTemp, NULL, 16);
-      if(tempST < 0x8000) {
-        // 235 -> 23.5
-        sprintf(soilTemp, "%lu.%01lu", tempST / 10, tempST % 10);
-        DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
-      }
-      else {
-        tempST = (0xffff - tempST + 1);
-        sprintf(soilTemp, "-%lu.%02lu", tempST / 100, tempST % 100);
-        DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
-      }
-
-      /* Soil VMC */
-      memset(soilVWC, 0, sizeof(soilVWC));
-      char tempVMCStr[20] = {0};
-      uint32_t tempVMC = 0;
-
-      memcpy(tempVMCStr, rs485Data_Soil_2 + 10, 4);
-      tempVMC = (uint32_t)strtol(tempVMCStr, NULL, 16) / 10;
-      sprintf(soilVWC, "%lu", tempVMC);
-      DEBUG("soilVWC = ");DEBUG(soilVWC);DEBUG("\r\n");
-
-      /* Soil EC */
-      memset(soilEC, 0, sizeof(soilEC));
-      char tempECStr[20] = {0};
-      uint32_t tempEC = 0;
-
-      memcpy(tempECStr, rs485Data_Soil_2 + 14, 4);
-      tempEC = (uint32_t)strtol(tempECStr, NULL, 16);
-      sprintf(soilEC, "%lu.%02lu", tempEC / 100, tempEC % 100);
-      DEBUG("soilEC = ");DEBUG(soilEC);DEBUG("\r\n");
+      tempST = (0xffff - tempST + 1); // 35
+      sprintf(soilTemp, "-%lu.%02lu", tempST / 10, tempST % 10 * 10); // 35 -> -3.50
+      DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
     }
+
+    /* Soil VMC */
+    memset(soilVWC, 0, sizeof(soilVWC));
+    char tempVMCStr[20] = {0};
+    uint32_t tempVMC = 0;
+
+    memcpy(tempVMCStr, rs485Data_Soil_2 + 10, 4);
+    tempVMC = (uint32_t)strtol(tempVMCStr, NULL, 16) / 10;
+    sprintf(soilVWC, "%lu", tempVMC);
+    DEBUG("soilVWC = ");DEBUG(soilVWC);DEBUG("\r\n");
+
+    /* Soil EC */
+    memset(soilEC, 0, sizeof(soilEC));
+    char tempECStr[20] = {0};
+    uint32_t tempEC = 0;
+
+    memcpy(tempECStr, rs485Data_Soil_2 + 14, 4);
+    tempEC = (uint32_t)strtol(tempECStr, NULL, 16);
+    sprintf(soilEC, "%lu.%02lu", tempEC / 100, tempEC % 100);
+    DEBUG("soilEC = ");DEBUG(soilEC);DEBUG("\r\n");
   }
 
   if(strnlen(rs485Data_Air, sizeof(rs485Data_Air)) == 0){
-    writeString(DEBUG_USART, "Air senser doesn't get data.\r\n");
+    writeString(DEBUG_USART, "Air senser : N/A\r\n");
     memset(airT, 0, sizeof(airT));
     memset(airH, 0, sizeof(airH));
     memcpy(airT, "0.00", 4);
@@ -370,25 +397,137 @@ funcptr fsm_getRS485Data()
     DEBUG("Air H : ");DEBUG(airH);DEBUG("\r\n");
   }
 
-  if(strnlen(rs485Data_PH, sizeof(rs485Data_PH)) == 0) {
-    if(strnlen(rs485Data_PH_2, sizeof(rs485Data_PH_2)) == 0){
-      writeString(DEBUG_USART, "PH_2 senser doesn't get data.\r\n");
+  if(strnlen(rs485Data_PH_2, sizeof(rs485Data_PH_2)) == 0){
+    writeString(DEBUG_USART, "PH_2 senser : N/A\r\n");
+  }
+  else {
+    writeString(DEBUG_USART, "PH_2 sensor data : ");
+    writeString(DEBUG_USART, rs485Data_PH_2);
+    writeString(DEBUG_USART, "\r\n");
+
+    /* PH */
+    memset(soilPH, 0, sizeof(soilPH));
+    char tempSoilPH[5] = {0};
+    uint16_t tempPH = 0;
+
+    memcpy(tempSoilPH, rs485Data_PH_2 + 6, 4);
+    tempPH = (uint16_t)strtol(tempSoilPH, NULL, 16);
+    sprintf(soilPH, "%lu.%02lu", tempPH / 100, tempPH % 100);
+    DEBUG("PH : ");DEBUG(soilPH);DEBUG("\r\n");
+  }
+
+  /* Solra */
+  if(strnlen(rawData_Solar, sizeof(rawData_Solar)) == 0){
+    writeString(DEBUG_USART, "Solra senser : N/A\r\n");
+    memset(solra, 0, sizeof(solra));
+    memcpy(solra, "0.0", 3);
+  }
+  else {
+    writeString(DEBUG_USART, "Solra sensor data : ");
+    writeString(DEBUG_USART, rawData_Solar);
+    writeString(DEBUG_USART, "\r\n");
+
+    memset(solra, 0, sizeof(solra));
+    memcpy(solra, rawData_Solar + 6, 4);
+  }
+
+  /* Water depth */ 
+  if(strnlen(rawData_Waterdepth, sizeof(rawData_Waterdepth)) == 0){
+    writeString(DEBUG_USART, "Water depth senser : N/A\r\n");
+    memset(waterDepth, 0, sizeof(waterDepth));
+    memcpy(waterDepth, "0.0", 3);
+  }
+  else {
+    writeString(DEBUG_USART, "water depth sensor data : ");
+    writeString(DEBUG_USART, rawData_Waterdepth);
+    writeString(DEBUG_USART, "\r\n");
+
+    memset(waterDepth, 0, sizeof(waterDepth));
+    memcpy(waterDepth, rawData_Waterdepth + 6, 4);
+  }
+
+  /* Sun Radiation */
+  if(strnlen(rawData_SR, sizeof(rawData_SR)) == 0){
+    writeString(DEBUG_USART, "Sun Radiation senser : N/A\r\n");
+    memset(sunRadiation, 0, sizeof(sunRadiation));
+    memcpy(sunRadiation, "0.0", 3);
+  }
+  else {
+    writeString(DEBUG_USART, "Sun Radiation sensor data : ");
+    writeString(DEBUG_USART, rawData_SR);
+    writeString(DEBUG_USART, "\r\n");
+
+    memset(sunRadiation, 0, sizeof(sunRadiation));
+    memcpy(sunRadiation, rawData_SR + 6, 4);
+  }
+
+  /* Wind Speed */
+  if(strnlen(rawData_WS, sizeof(rawData_WS)) == 0){
+    writeString(DEBUG_USART, "Wind speed senser : N/A\r\n");
+    memset(windSpeed, 0, sizeof(windSpeed));
+    memcpy(windSpeed, "0.0", 3);
+  }
+  else {
+    writeString(DEBUG_USART, "Wind speed sensor data : ");
+    writeString(DEBUG_USART, rawData_WS);
+    writeString(DEBUG_USART, "\r\n");
+
+    memset(windSpeed, 0, sizeof(windSpeed));
+    memcpy(windSpeed, rawData_WS + 6, 4);
+  }
+
+  /* Wind Speed 2 */
+  if(strnlen(rawData_WS_2, sizeof(rawData_WS_2)) == 0){
+    writeString(DEBUG_USART, "Wind speed senser : N/A\r\n");
+  }
+  else {
+    writeString(DEBUG_USART, "Wind speed sensor 2 data : ");
+    writeString(DEBUG_USART, rawData_WS_2);
+    writeString(DEBUG_USART, "\r\n");
+
+    char tempStr[5] = {0};
+    memcpy(tempStr, rawData_WS_2 + 6, 4);
+    uint32_t value = strtol(tempStr, NULL, 16) / 10;
+
+    memset(windSpeed, 0, sizeof(windSpeed));
+    sprintf(windSpeed, "%x", value);
+  }
+  
+  /* Leaf T&H */
+  if(strnlen(rawData_Leaf, sizeof(rawData_Leaf)) == 0){
+    writeString(DEBUG_USART, "Leaf T&H senser : N/A\r\n");
+    memset(leafT, 0, sizeof(leafT));
+    memset(leafH, 0, sizeof(leafH));
+    memcpy(leafT, "0.00", 4);
+    memcpy(leafH, "0", 1);
+  }
+  else {
+    writeString(DEBUG_USART, "Leaf T&H sensor data : ");
+    writeString(DEBUG_USART, rawData_Leaf);
+    writeString(DEBUG_USART, "\r\n");
+
+    /* Leaf temp */
+    memset(leafT, 0, sizeof(leafT));
+    char tempLeafT[5] = {0};
+    uint16_t tempLT = 0;
+
+    memcpy(tempLeafT, rawData_Leaf + 6, 4);
+    tempLT = (uint16_t)strtol(tempLeafT, NULL, 16);
+    if(tempLT <= 10000) { 
+      sprintf(leafT, "%lu.%02lu", tempLT / 100, tempLT % 100);
     }
     else {
-      writeString(DEBUG_USART, "PH_2 sensor data : ");
-      writeString(DEBUG_USART, rs485Data_PH_2);
-      writeString(DEBUG_USART, "\r\n");
-
-      /* PH */
-      memset(soilPH, 0, sizeof(soilPH));
-      char tempSoilPH[5] = {0};
-      uint16_t tempPH = 0;
-
-      memcpy(tempSoilPH, rs485Data_PH_2 + 6, 4);
-      tempPH = (uint16_t)strtol(tempSoilPH, NULL, 16);
-      sprintf(soilPH, "%lu.%02lu", tempPH / 100, tempPH % 100);
-      DEBUG("PH : ");DEBUG(soilPH);DEBUG("\r\n");
+      sprintf(leafT, "-%lu.%02lu", (65536 - tempLT + 1) / 10, (65536 - tempLT + 1) % 100 * 10);
     }
+
+    /* Leaf H */
+    memset(leafH, 0, sizeof(leafH));
+    char tempLeafH[5] = {0};
+    uint16_t tempLH = 0;
+
+    memcpy(tempLeafH, rawData_Leaf + 10, 4);
+    tempLH = (uint16_t)strtol(tempLeafH, NULL, 16) / 10; // 356 (35.6) -> 35 (35)
+    sprintf(leafH, "%d", tempLH);
   }
 
   return (funcptr)nb_idle;
@@ -436,16 +575,22 @@ funcptr nb_getSignalPower() {
 }
 
 funcptr nb_writeNewDataInBuffer() {
-  sprintf(newData, "{\"device_id\":%lu,\"hash\":\"%s\",\"data\":{\"st\":%s,\"sm\":%s,\"sec\":%s,\"sph\":%s,\"at\":%s,\"ah\":%s,\"dp\":%s,\"it\":%s,\"sv\":%s,\"volt\":%s,\"rssi\":%s,\"snr\":%s},\"gts\":%lu}",
+  sprintf(newData, "{\"device_id\":%lu,\"hash\":\"%s\",\"data\":{\"st\":%s,\"sm\":%s,\"sec\":%s,\"sph\":%s,\"at\":%s,\"ah\":%s,\"dp\":%s,\"spar\":%s,\"wdep\":%s,\"sr\":%s,\"ws\":%s,\"lt\":%s,\"lh\":%s,\"it\":%s,\"sv\":%s,\"volt\":%s,\"rssi\":%s,\"snr\":%s},\"gts\":%lu}",
             pMAC,
             pHash,
             soilTemp,
             soilVWC,
             soilEC,
             soilPH,
-            airT,          // AirT
-            airH,          // AirH 
-            "0.00",          // DewPoint
+            airT,
+            airH,
+            "0.00",      // DewPoint
+            solra,
+            waterDepth,
+            sunRadiation,
+            windSpeed,
+            leafT,
+            leafH,
             innerT,
             solarV,
             batV,

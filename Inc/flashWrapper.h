@@ -309,7 +309,7 @@ extern "C" {
 #define FLASH_FLAG_START_PAGE   255
 #define FLASH_FLAG_END_PAGE     256
 
-#define flashTitle              ((uint64_t)0x5B)
+#define flashTitle              ((uint64_t)0x5A)
 
 #define FLASH_ACCESS_BUFFER_SIZE 1000 // arbitrary size, large enough to contain a struct of groupOfNodes
 
