@@ -7,11 +7,11 @@ extern "C" {
 
 #define eprAddress       0xA0
 #define flagAddress      0
-#define dataFirstAddress 256
+#define dataFirstAddress 384
 #define allPages         512   /* All pages */
 #define MAX_EEPROM_SIZE  64000 /* All bytes */
 #define pageBytes        128   /* Bytes of every page */
-#define payloadLen       256    
+#define payloadLen       384  
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -207,7 +207,7 @@ funcptr fsm_getRS485Data()
   uint8_t sunRadiation_array[8]     = {0x08,0x04,0x00,0x00,0x00,0x01,0x31,0x53}; /* Infwin sensor */
   uint8_t windSpeed_array[8]        = {0x10,0x03,0x00,0x00,0x00,0x01,0x87,0x4B}; /* PRS sensor */
   uint8_t windSpeed_array2[8]       = {0x19,0x03,0x00,0x00,0x00,0x01,0x87,0xD2}; /* Laytion sensor */
-  uint8_t leaf_array[8]             = {0x20,0x03,0x00,0x00,0x00,0x01,0x87,0x4B}; 
+  uint8_t leaf_array[8]             = {0x20,0x03,0x00,0x00,0x00,0x02,0xC2,0xBA}; 
 
   powerOnRS485Sensor();
   rs485Flag = true;
@@ -240,6 +240,8 @@ funcptr fsm_getRS485Data()
   getRS485Data(rawData_Leaf, 9);
 
   powerOffRS485Sensor();
+  
+  DEBUG("\r\n--------- Infwin Sensor ---------\r\n");
 
   if(strnlen(rs485Data_Soil, sizeof(rs485Data_Soil)) == 0){
     writeString(DEBUG_USART, "Soil senser : N/A\r\n");
@@ -268,7 +270,7 @@ funcptr fsm_getRS485Data()
     else {
       sprintf(soilTemp, "-%lu.%02lu", (65536 - tempST + 1) / 100, (65536 - tempST + 1) % 100);
     }
-    DEBUG("SoilTemp : ");DEBUG(soilTemp);DEBUG("\r\n");
+    // DEBUG("SoilTemp : ");DEBUG(soilTemp);DEBUG("\r\n");
 
     /* Soil VMC */
     memset(soilVWC, 0, sizeof(soilVWC));
@@ -278,7 +280,7 @@ funcptr fsm_getRS485Data()
     memcpy(tempVMCStr, rs485Data_Soil + 10, 4);
     tempVMC = (uint32_t)strtol(tempVMCStr, NULL, 16) / 100;
     sprintf(soilVWC, "%lu", tempVMC);
-    DEBUG("SoilVWC : ");DEBUG(soilVWC);DEBUG("\r\n");
+    // DEBUG("SoilVWC : ");DEBUG(soilVWC);DEBUG("\r\n");
 
     /* Soil EC */
     memset(soilEC, 0, sizeof(soilEC));
@@ -287,8 +289,8 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempECStr, rs485Data_Soil + 14, 4);
     tempEC = (uint32_t)strtol(tempECStr, NULL, 16);
-    sprintf(soilEC, "%lu.%03lu", tempEC / 1000, tempEC % 1000);
-    DEBUG("SoilEC : ");DEBUG(soilEC);DEBUG("\r\n");
+    sprintf(soilEC, "%lu.%03lu", tempEC / 100, (tempEC % 100) * 10);
+    // DEBUG("SoilEC : ");DEBUG(soilEC);DEBUG("\r\n");
   }
 
   if(strnlen(rs485Data_PH, sizeof(rs485Data_PH)) == 0){
@@ -297,9 +299,9 @@ funcptr fsm_getRS485Data()
     memcpy(soilPH, "0.00", 4);
   }
   else {
-    // writeString(DEBUG_USART, "PH sensor data : ");
-    // writeString(DEBUG_USART, rs485Data_PH);
-    // writeString(DEBUG_USART, "\r\n");
+    writeString(DEBUG_USART, "PH sensor data : ");
+    writeString(DEBUG_USART, rs485Data_PH);
+    writeString(DEBUG_USART, "\r\n");
 
     /* PH */
     memset(soilPH, 0, sizeof(soilPH));
@@ -309,56 +311,9 @@ funcptr fsm_getRS485Data()
     memcpy(tempSoilPH, rs485Data_PH + 10, 4);
     tempPH = (uint32_t)strtol(tempSoilPH, NULL, 16); // 700 -> 7.00
     sprintf(soilPH, "%lu.%02lu", tempPH / 100, tempPH % 100);
-    DEBUG("Soil PH : ");DEBUG(soilPH);DEBUG("\r\n");
+    // DEBUG("Soil PH : ");DEBUG(soilPH);DEBUG("\r\n");
   }
   
-  if(strnlen(rs485Data_Soil_2, sizeof(rs485Data_Soil_2)) == 0){
-    writeString(DEBUG_USART, "Soil_2 senser : N/A\r\n");
-  }
-  else {
-    writeString(DEBUG_USART, "Soil_2 sensor data : ");
-    writeString(DEBUG_USART, rs485Data_Soil_2);
-    writeString(DEBUG_USART, "\r\n");
-
-    /* Soil temp */
-    memset(soilTemp, 0, sizeof(soilTemp));
-    char tempSoilTemp[20] = {0};
-    uint32_t tempST = 0;
-
-    memcpy(tempSoilTemp, rs485Data_Soil_2 + 6, 4);
-    tempST = (uint32_t)strtol(tempSoilTemp, NULL, 16);
-    if(tempST < 10000) {
-      // 235 -> 23.50
-      sprintf(soilTemp, "%lu.%02lu", tempST / 10, tempST % 10 * 10);
-      DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
-    }
-    else {
-      tempST = (0xffff - tempST + 1); // 35
-      sprintf(soilTemp, "-%lu.%02lu", tempST / 10, tempST % 10 * 10); // 35 -> -3.50
-      DEBUG("soilTemp = ");DEBUG(soilTemp);DEBUG("\r\n");
-    }
-
-    /* Soil VMC */
-    memset(soilVWC, 0, sizeof(soilVWC));
-    char tempVMCStr[20] = {0};
-    uint32_t tempVMC = 0;
-
-    memcpy(tempVMCStr, rs485Data_Soil_2 + 10, 4);
-    tempVMC = (uint32_t)strtol(tempVMCStr, NULL, 16) / 10;
-    sprintf(soilVWC, "%lu", tempVMC);
-    DEBUG("soilVWC = ");DEBUG(soilVWC);DEBUG("\r\n");
-
-    /* Soil EC */
-    memset(soilEC, 0, sizeof(soilEC));
-    char tempECStr[20] = {0};
-    uint32_t tempEC = 0;
-
-    memcpy(tempECStr, rs485Data_Soil_2 + 14, 4);
-    tempEC = (uint32_t)strtol(tempECStr, NULL, 16);
-    sprintf(soilEC, "%lu.%02lu", tempEC / 100, tempEC % 100);
-    DEBUG("soilEC = ");DEBUG(soilEC);DEBUG("\r\n");
-  }
-
   if(strnlen(rs485Data_Air, sizeof(rs485Data_Air)) == 0){
     writeString(DEBUG_USART, "Air senser : N/A\r\n");
     memset(airT, 0, sizeof(airT));
@@ -384,7 +339,7 @@ funcptr fsm_getRS485Data()
     else {
       sprintf(airT, "%lu.%02lu", (65536 - tempAT) / 100, (65536 - tempAT) % 100);
     }
-    DEBUG("Air T : ");DEBUG(airT);DEBUG("\r\n");
+    // DEBUG("Air T : ");DEBUG(airT);DEBUG("\r\n");
 
     /* Air H */
     memset(airH, 0, sizeof(airH));
@@ -394,7 +349,73 @@ funcptr fsm_getRS485Data()
     memcpy(tempAirHStr, rs485Data_Air + 10, 4);
     tempAH = (uint16_t)strtol(tempAirHStr, NULL, 16); // 3000 (30.00%)
     sprintf(airH, "%lu.%02lu", tempAH / 100, tempAH % 100);
-    DEBUG("Air H : ");DEBUG(airH);DEBUG("\r\n");
+    // DEBUG("Air H : ");DEBUG(airH);DEBUG("\r\n");
+  }
+
+  DEBUG("\r\n--------- PRS Sensor ---------\r\n");
+  /* Wind Speed */
+  if(strnlen(rawData_WS, sizeof(rawData_WS)) == 0){
+    writeString(DEBUG_USART, "Wind speed senser : N/A\r\n");
+    memset(windSpeed, 0, sizeof(windSpeed));
+    memcpy(windSpeed, "0.0", 3);
+  }
+  else {
+    writeString(DEBUG_USART, "Wind speed sensor data : ");
+    writeString(DEBUG_USART, rawData_WS);
+    writeString(DEBUG_USART, "\r\n");
+
+    memset(windSpeed, 0, sizeof(windSpeed));
+    char tempWSStr[20] = {0};
+    uint32_t tempWS = 0;
+
+    memcpy(tempWSStr, rawData_WS + 6, 4);
+    tempWS = (uint32_t)strtol(tempWSStr, NULL, 16);
+    sprintf(windSpeed, "%lu.%lu", tempWS / 10, tempWS % 10);
+  }
+
+  DEBUG("\r\n--------- Laytion Sensor ---------\r\n");
+
+  if(strnlen(rs485Data_Soil_2, sizeof(rs485Data_Soil_2)) == 0){
+    writeString(DEBUG_USART, "Soil_2 senser : N/A\r\n");
+  }
+  else {
+    writeString(DEBUG_USART, "Soil_2 sensor data : ");
+    writeString(DEBUG_USART, rs485Data_Soil_2);
+    writeString(DEBUG_USART, "\r\n");
+
+    /* Soil temp */
+    memset(soilTemp, 0, sizeof(soilTemp));
+    char tempSoilTemp[20] = {0};
+    uint32_t tempST = 0;
+
+    memcpy(tempSoilTemp, rs485Data_Soil_2 + 6, 4);
+    tempST = (uint32_t)strtol(tempSoilTemp, NULL, 16);
+    if(tempST < 8000) {
+      // 235 -> 23.50
+      sprintf(soilTemp, "%lu.%02lu", tempST / 10, tempST % 10 * 10);
+    }
+    else {
+      tempST = (0xffff - tempST + 1); // 35
+      sprintf(soilTemp, "-%lu.%02lu", tempST / 10, tempST % 10 * 10); // 35 -> -3.50
+    }
+
+    /* Soil VMC */
+    memset(soilVWC, 0, sizeof(soilVWC));
+    char tempVMCStr[20] = {0};
+    uint32_t tempVMC = 0;
+
+    memcpy(tempVMCStr, rs485Data_Soil_2 + 10, 4);
+    tempVMC = (uint32_t)strtol(tempVMCStr, NULL, 16) / 10;
+    sprintf(soilVWC, "%lu", tempVMC);
+
+    /* Soil EC */
+    memset(soilEC, 0, sizeof(soilEC));
+    char tempECStr[20] = {0};
+    uint32_t tempEC = 0;
+
+    memcpy(tempECStr, rs485Data_Soil_2 + 14, 4);
+    tempEC = (uint32_t)strtol(tempECStr, NULL, 16);
+    sprintf(soilEC, "%lu.%03lu", tempEC / 100, (tempEC % 100) * 10);
   }
 
   if(strnlen(rs485Data_PH_2, sizeof(rs485Data_PH_2)) == 0){
@@ -416,19 +437,24 @@ funcptr fsm_getRS485Data()
     DEBUG("PH : ");DEBUG(soilPH);DEBUG("\r\n");
   }
 
-  /* Solra */
+  /* SolraPAR */
   if(strnlen(rawData_Solar, sizeof(rawData_Solar)) == 0){
-    writeString(DEBUG_USART, "Solra senser : N/A\r\n");
+    writeString(DEBUG_USART, "Solra PAR senser : N/A\r\n");
     memset(solra, 0, sizeof(solra));
     memcpy(solra, "0.0", 3);
   }
   else {
-    writeString(DEBUG_USART, "Solra sensor data : ");
+    writeString(DEBUG_USART, "Solra PAR sensor data : ");
     writeString(DEBUG_USART, rawData_Solar);
     writeString(DEBUG_USART, "\r\n");
 
     memset(solra, 0, sizeof(solra));
-    memcpy(solra, rawData_Solar + 6, 4);
+    char tempStr[20] = {0};
+    uint32_t tempSR = 0;
+
+    memcpy(tempStr, rawData_Solar + 6, 4);
+    tempSR = (uint32_t)strtol(tempStr, NULL, 16);
+    sprintf(solra, "%lu.%lu", tempSR / 10, tempSR % 10);
   }
 
   /* Water depth */ 
@@ -443,7 +469,12 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "\r\n");
 
     memset(waterDepth, 0, sizeof(waterDepth));
-    memcpy(waterDepth, rawData_Waterdepth + 6, 4);
+    char tempStr[20] = {0};
+    uint32_t tempWD = 0;
+
+    memcpy(tempStr, rawData_Waterdepth + 6, 4);
+    tempWD = (uint32_t)strtol(tempStr, NULL, 16);
+    sprintf(waterDepth, "%lu.%lu", tempWD / 10, tempWD % 10);
   }
 
   /* Sun Radiation */
@@ -458,22 +489,12 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "\r\n");
 
     memset(sunRadiation, 0, sizeof(sunRadiation));
-    memcpy(sunRadiation, rawData_SR + 6, 4);
-  }
+    char tempStr[20] = {0};
+    uint32_t tempSR = 0;
 
-  /* Wind Speed */
-  if(strnlen(rawData_WS, sizeof(rawData_WS)) == 0){
-    writeString(DEBUG_USART, "Wind speed senser : N/A\r\n");
-    memset(windSpeed, 0, sizeof(windSpeed));
-    memcpy(windSpeed, "0.0", 3);
-  }
-  else {
-    writeString(DEBUG_USART, "Wind speed sensor data : ");
-    writeString(DEBUG_USART, rawData_WS);
-    writeString(DEBUG_USART, "\r\n");
-
-    memset(windSpeed, 0, sizeof(windSpeed));
-    memcpy(windSpeed, rawData_WS + 6, 4);
+    memcpy(tempStr, rawData_SR + 6, 4);
+    tempSR = (uint32_t)strtol(tempStr, NULL, 16);
+    sprintf(sunRadiation, "%lu.0", tempSR);
   }
 
   /* Wind Speed 2 */
@@ -485,12 +506,13 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, rawData_WS_2);
     writeString(DEBUG_USART, "\r\n");
 
-    char tempStr[5] = {0};
-    memcpy(tempStr, rawData_WS_2 + 6, 4);
-    uint32_t value = strtol(tempStr, NULL, 16) / 10;
-
     memset(windSpeed, 0, sizeof(windSpeed));
-    sprintf(windSpeed, "%x", value);
+    char tempStr[20] = {0};
+    uint32_t tempWS = 0;
+
+    memcpy(tempStr, rawData_WS_2 + 6, 4);
+    tempWS = (uint32_t)strtol(tempStr, NULL, 16);
+    sprintf(windSpeed, "%lu.%lu", tempWS / 100, (tempWS % 100) / 10);
   }
   
   /* Leaf T&H */
@@ -513,11 +535,11 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempLeafT, rawData_Leaf + 6, 4);
     tempLT = (uint16_t)strtol(tempLeafT, NULL, 16);
-    if(tempLT <= 10000) { 
+    if(tempLT <= 8000) { 
       sprintf(leafT, "%lu.%02lu", tempLT / 100, tempLT % 100);
     }
     else {
-      sprintf(leafT, "-%lu.%02lu", (65536 - tempLT + 1) / 10, (65536 - tempLT + 1) % 100 * 10);
+      sprintf(leafT, "-%lu.%02lu", (65536 - tempLT + 1) / 10, (65536 - tempLT + 1) % 10 * 10);
     }
 
     /* Leaf H */
@@ -530,6 +552,7 @@ funcptr fsm_getRS485Data()
     sprintf(leafH, "%d", tempLH);
   }
 
+  DEBUG("----------------------------------\r\n");
   return (funcptr)nb_idle;
 }
 
@@ -547,7 +570,7 @@ funcptr nb_idle()
 }
 
 funcptr nb_getSignalPower() {
-  DEBUG("Get signal power\r\n");
+  // DEBUG("Get signal power\r\n");
 
   char msg[100] = {0};
   /* Get power */
@@ -648,7 +671,7 @@ funcptr nb_waitIP() {
     }
   }
   else if(memcmp(msg, OK_MSG_CGDCONT, OK_MSG_CGDCONT_TEXT_NUM) == 0) {
-    DEBUG("Wait IP OK\r\n");
+    // DEBUG("Wait IP OK\r\n");
     DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
     nbiotFindIPFlag = false;
     nbiotGetIPFlag = true;
@@ -703,7 +726,7 @@ funcptr nb_writeDataInNBIOT() {
             amountOfData,
             readySendData
             );
-  DEBUG("Fianl array is ready.\r\n");
+  // DEBUG("Fianl array is ready.\r\n");
 
   /* Delete data and rp in file system */
   writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"data1\"\r\n");
@@ -941,11 +964,30 @@ funcptr nb_sendData() {
 
   vTaskDelay(pdMS_TO_TICKS(1000));
 
-  char *str = strstr(msg, "OK");
+  char *str      = strstr(msg, "OK");
+  char *errorMsg = strstr(msg, "422 Unprocessable");
   if(str != NULL) { /* Send command successful */
     DEBUG("Send is OK\r\n");
     vTaskDelay(pdMS_TO_TICKS(2000));
     return (funcptr)nb_getResponse;
+  }
+  else if(errorMsg != NULL) {
+    DEBUG("Get 422 status\r\n");
+    nbiotGetIPFlag = false;
+    getOKFlag = true;
+    if(amountOfData > 1) {
+      uint32_t finalAddr = 0;
+      for(int i = 1; i < dataPos; i++) {
+        uint32_t addr = eepromFlag.nextSendAddress + (i - 1) * payloadLen;
+        if(addr >= MAX_EEPROM_SIZE) addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
+        parSave(nonData, addr, payloadLen);
+        writeString(DEBUG_USART, "Delete data at : ");writeUint32(DEBUG_USART, addr);writeString(DEBUG_USART, "\r\n");
+        finalAddr = addr + payloadLen;
+      }
+
+      changeSendAddress(finalAddr);
+    }
+    return (funcptr)fsm_sleep;
   }
 
   DEBUG("Save in eeprom.\r\n");
@@ -978,8 +1020,8 @@ funcptr nb_getResponse()
     DEBUG("Part response : ");writeData(DEBUG_USART, inputStringLpuart1.string, len);
   }
 
-  char *partMsg = strstr(inputStringLpuart1.string, "200");
-  if(partMsg == NULL) {
+  char *partMsg  = strstr(inputStringLpuart1.string, "200");
+  if(partMsg == NULL) { // Not 200 or 422
     DEBUG("Result : FAIL!\r\n");
     writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
     writeString(DEBUG_USART, "\r\n");

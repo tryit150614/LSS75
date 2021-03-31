@@ -30,8 +30,8 @@ void Rtc::init() {
   */
   if(flashRead(FLASH_FLAG_START_ADDR) != 0){
 
-    Rtc::setTime(5, 0, 0);
-    Rtc::setDate(20, 10, 29);
+    Rtc::setTime(0, 0, 0);
+    Rtc::setDate(21, 3, 29);
     writeString(DEBUG_USART, "Init RTC time.\r\n");
   }
 
