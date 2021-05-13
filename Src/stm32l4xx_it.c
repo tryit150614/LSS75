@@ -278,10 +278,11 @@ void LPUART1_IRQHandler(void)
     writeString(DEBUG_USART, "(NBIOT) \r\n");
     // enum ringBufferStatus status;
     while(Lpuart1StartPos != currentPos) {
-       ringBuffer_write(&lpuart1Buf, dmaLpuart1Buffer[Lpuart1StartPos]);
+      ringBuffer_write(&lpuart1Buf, dmaLpuart1Buffer[Lpuart1StartPos]);
       //  sendChar(DEBUG_USART, dmaLpuart1Buffer[Lpuart1StartPos]);
-       sendChar(DEBUG_USART, lpuart1Buf.bufferPtr[lpuart1Buf.writeIndex - 1]);
-       Lpuart1StartPos = (Lpuart1StartPos + 1) % DMA_LPUART1_BUFFER_SIZE;
+      if(len < 1000)
+        sendChar(DEBUG_USART, dmaLpuart1Buffer[Lpuart1StartPos]);
+      Lpuart1StartPos = (Lpuart1StartPos + 1) % DMA_LPUART1_BUFFER_SIZE;
     }
     writeString(DEBUG_USART, "\r\n");
     // DEBUG("writeIndex = ");writeUint32(DEBUG_USART , lpuart1Buf.writeIndex);DEBUG("\r\n\r\n");

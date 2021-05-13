@@ -101,6 +101,7 @@ static void voltToTemperature(float tempVolt, char * tempStr);
 static void floatToString(float value, char * str, int dot);
 static void transmitRS485(uint8_t * deviceNumber);
 static void getRS485Data(char * deviceData, int receiveDataLen);
+static int nbiot_getResponse(int sec, char* target);
 //-----------------------------------
 
 void fsm_init()
@@ -645,33 +646,19 @@ funcptr nb_waitIP() {
   writeString(DEBUG_USART, "(UART) AT+CGDCONT?\r\n");
   writeString(LPUART1, "AT+CGDCONT?\r\n");
 
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  const uint32_t timeout = 1000 * 2;
-  while ((current - start) < timeout)
-  {
-    current = HAL_GetTick();
-    dog.reload();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-
-      strcat(msg, inputStringLpuart1.string);
-    }
-  }
-
-  if(memcmp(msg, ERROR_MSG_CGDCONT, ERROR_MSG_CGDCONT_TEXT_NUM) == 0) {
+  if(nbiot_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
+  { /* 尚未註冊 */
     waitIPCount++;
-    if(waitIPCount >= 150) {
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    if(waitIPCount >= 600) {
       waitIPCount = 0;
       noConnectFlag = true;
       DEBUG("Doesn't get IP.\r\n");     
       return (funcptr)nb_getSignalPower;
     }
   }
-  else if(memcmp(msg, OK_MSG_CGDCONT, OK_MSG_CGDCONT_TEXT_NUM) == 0) {
-    // DEBUG("Wait IP OK\r\n");
+  else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
+  { /* 已經註冊 */
     DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
     nbiotFindIPFlag = false;
     nbiotGetIPFlag = true;
@@ -1246,6 +1233,32 @@ static void getRS485Data(char * deviceData, int receiveDataLen){
     inputStringUsart3.ready = 0;
     binaryToString(inputStringUsart3.string, receiveDataLen, deviceData);
   }
+}
+
+static int nbiot_getResponse(int sec, char* target)
+{
+    uint32_t start = HAL_GetTick();
+    uint32_t current = HAL_GetTick();
+    uint32_t timeout = sec * 1000;
+
+    while ((current - start) < timeout)
+    {
+        dog.reload();
+        current = HAL_GetTick();
+        receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
+        if (inputStringLpuart1.ready == 1)
+        {
+            inputStringLpuart1.ready = 0;
+            char *part = strstr(inputStringLpuart1.string, target);
+            if(part != NULL)
+            {
+                return 1; //OK
+            }
+        }
+    }
+    
+    /* Fail */
+    return 0;
 }
 
 //-----------------------------------------------------------------
