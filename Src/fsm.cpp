@@ -164,7 +164,7 @@ funcptr fsm_getADCValue()
     memset(innerT, 0, sizeof(innerT));
     //-----------  Votagle  ---------//
     floatToString(tempVolt[0], batV, 10);
-    floatToString(tempVolt[1], solarV, 100);
+    floatToString(tempVolt[1], solarV, 10);
     //-----------Temperature---------//
     voltToTemperature(tempVolt[2], innerT);
 
@@ -249,9 +249,9 @@ funcptr fsm_getRS485Data()
     memset(soilTemp, 0, 20);
     memset(soilVWC, 0, 20);
     memset(soilEC, 0, 20);
-    memcpy(soilTemp, "0.00", 4);
+    memcpy(soilTemp, "0.0", 3);
     memcpy(soilVWC, "0", 1);
-    memcpy(soilEC, "0.000", 5);
+    memcpy(soilEC, "0.0", 3);
   }
   else {
     writeString(DEBUG_USART, "Soil sensor data : ");
@@ -297,7 +297,7 @@ funcptr fsm_getRS485Data()
   if(strnlen(rs485Data_PH, sizeof(rs485Data_PH)) == 0){
     writeString(DEBUG_USART, "PH senser : N/A\r\n");
     memset(soilPH, 0, 20);
-    memcpy(soilPH, "0.00", 4);
+    memcpy(soilPH, "0.0", 3);
   }
   else {
     writeString(DEBUG_USART, "PH sensor data : ");
@@ -319,8 +319,8 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "Air senser : N/A\r\n");
     memset(airT, 0, sizeof(airT));
     memset(airH, 0, sizeof(airH));
-    memcpy(airT, "0.00", 4);
-    memcpy(airH, "0.00", 4);
+    memcpy(airT, "0.0", 3);
+    memcpy(airH, "0.0", 3);
   }
   else {
     writeString(DEBUG_USART, "Air sensor data : ");
@@ -340,7 +340,6 @@ funcptr fsm_getRS485Data()
     else {
       sprintf(airT, "%lu.%02lu", (65536 - tempAT) / 100, (65536 - tempAT) % 100);
     }
-    // DEBUG("Air T : ");DEBUG(airT);DEBUG("\r\n");
 
     /* Air H */
     memset(airH, 0, sizeof(airH));
@@ -350,7 +349,6 @@ funcptr fsm_getRS485Data()
     memcpy(tempAirHStr, rs485Data_Air + 10, 4);
     tempAH = (uint16_t)strtol(tempAirHStr, NULL, 16); // 3000 (30.00%)
     sprintf(airH, "%lu.%02lu", tempAH / 100, tempAH % 100);
-    // DEBUG("Air H : ");DEBUG(airH);DEBUG("\r\n");
   }
 
   DEBUG("\r\n--------- PRS Sensor ---------\r\n");
@@ -371,7 +369,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempWSStr, rawData_WS + 6, 4);
     tempWS = (uint32_t)strtol(tempWSStr, NULL, 16);
-    sprintf(windSpeed, "%lu.%lu", tempWS / 10, tempWS % 10);
+    sprintf(windSpeed, "%lu.%01lu", tempWS / 10, tempWS % 10);
   }
 
   DEBUG("\r\n--------- Laytion Sensor ---------\r\n");
@@ -435,7 +433,6 @@ funcptr fsm_getRS485Data()
     memcpy(tempSoilPH, rs485Data_PH_2 + 6, 4);
     tempPH = (uint16_t)strtol(tempSoilPH, NULL, 16);
     sprintf(soilPH, "%lu.%02lu", tempPH / 100, tempPH % 100);
-    DEBUG("PH : ");DEBUG(soilPH);DEBUG("\r\n");
   }
 
   /* SolraPAR */
@@ -455,7 +452,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempStr, rawData_Solar + 6, 4);
     tempSR = (uint32_t)strtol(tempStr, NULL, 16);
-    sprintf(solra, "%lu.%lu", tempSR / 10, tempSR % 10);
+    sprintf(solra, "%lu.%01lu", tempSR / 10, tempSR % 10);
   }
 
   /* Water depth */ 
@@ -475,14 +472,14 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempStr, rawData_Waterdepth + 6, 4);
     tempWD = (uint32_t)strtol(tempStr, NULL, 16);
-    sprintf(waterDepth, "%lu.%lu", tempWD / 10, tempWD % 10);
+    sprintf(waterDepth, "%lu.%01lu", tempWD / 10, tempWD % 10);
   }
 
   /* Sun Radiation */
   if(strnlen(rawData_SR, sizeof(rawData_SR)) == 0){
     writeString(DEBUG_USART, "Sun Radiation senser : N/A\r\n");
     memset(sunRadiation, 0, sizeof(sunRadiation));
-    memcpy(sunRadiation, "0.0", 3);
+    memcpy(sunRadiation, "0", 1);
   }
   else {
     writeString(DEBUG_USART, "Sun Radiation sensor data : ");
@@ -495,7 +492,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempStr, rawData_SR + 6, 4);
     tempSR = (uint32_t)strtol(tempStr, NULL, 16);
-    sprintf(sunRadiation, "%lu.0", tempSR);
+    sprintf(sunRadiation, "%lu", tempSR);
   }
 
   /* Wind Speed 2 */
@@ -513,7 +510,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempStr, rawData_WS_2 + 6, 4);
     tempWS = (uint32_t)strtol(tempStr, NULL, 16);
-    sprintf(windSpeed, "%lu.%lu", tempWS / 100, (tempWS % 100) / 10);
+    sprintf(windSpeed, "%lu.%01lu", tempWS / 100, (tempWS % 100) / 10);
   }
   
   /* Leaf T&H */
@@ -521,8 +518,8 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "Leaf T&H senser : N/A\r\n");
     memset(leafT, 0, sizeof(leafT));
     memset(leafH, 0, sizeof(leafH));
-    memcpy(leafT, "0.00", 4);
-    memcpy(leafH, "0", 1);
+    memcpy(leafT, "0.0", 3);
+    memcpy(leafH, "0.0", 3);
   }
   else {
     writeString(DEBUG_USART, "Leaf T&H sensor data : ");
@@ -549,8 +546,8 @@ funcptr fsm_getRS485Data()
     uint16_t tempLH = 0;
 
     memcpy(tempLeafH, rawData_Leaf + 10, 4);
-    tempLH = (uint16_t)strtol(tempLeafH, NULL, 16) / 10; // 356 (35.6) -> 35 (35)
-    sprintf(leafH, "%d", tempLH);
+    tempLH = (uint16_t)strtol(tempLeafH, NULL, 16); // 356 (35.6)
+    sprintf(leafH, "%d.%01d", tempLH / 10, tempLH % 10);
   }
 
   DEBUG("----------------------------------\r\n");
@@ -608,7 +605,7 @@ funcptr nb_writeNewDataInBuffer() {
             soilPH,
             airT,
             airH,
-            "0.00",      // DewPoint
+            "0.0",      // DewPoint
             solra,
             waterDepth,
             sunRadiation,
@@ -1187,7 +1184,7 @@ static void voltToTemperature(float tempVolt, char * tempStr)
   float tmpFrac = tmpVal - tmpInt1;
   int   tmpInt2 = std::trunc(tmpFrac * 10);
   if (tmpInt2 < 0) tmpInt2 *= -1;
-  sprintf (tempStr, "%d.%d", tmpInt1, tmpInt2);
+  sprintf (tempStr, "%d.%01d", tmpInt1, tmpInt2);
 }
 
 static void floatToString(float value, char * str, int dot) {
