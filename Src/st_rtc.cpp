@@ -4,7 +4,7 @@
 #include "nodeManager.h"
 #include "flashWrapper.h"
 
-extern struct FlashMACStruct flashMAC;
+extern struct MACStruct flashMAC;
 
 Rtc rtc;
 

@@ -45,4 +45,7 @@ funcptr nb_writeDataInNBIOT();
 funcptr nb_getResponse();
 funcptr nb_sendData();
 
+funcptr fsm_checkModule();
+funcptr catM_Connect_And_Send();
+
 #endif /* FSM_H_ */

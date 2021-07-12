@@ -27,18 +27,20 @@ SD card version
 #include "rng.h"
 #include "eeprom.h"
 #include "rtcController.h"
+#include "delay.h"
 
-struct FlashDataStruct flashData = {(uint64_t)1200};
-struct FlashMACStruct flashMAC = {13, 0, 0};
+struct ResendStruct flashResend = {(uint64_t)1200};
+struct MACStruct flashMAC = {13};
+struct HashStruct flashHASH = {"FDxjme5e"};
 struct FlashFlagStruct flashFlag = {1};
 
 extern uint16_t adc1DmaBuffer[DMA1_ADC_BUFFER_SIZE];
 extern struct FSMAttributes fsmAttributes;
 extern struct FSMAttributes_NB fsmAttributes_NB;
 
-extern volatile uint32_t flashDataAddr;
+extern volatile uint32_t flashResendAddr;
 extern volatile uint32_t flashMACAddr;
-extern const unsigned long FlashMACStructSize;
+extern const unsigned long MACStructSize;
 
 const unsigned int lpuart1DataSize = 800;
 uint8_t lpuart1Data[lpuart1DataSize];
@@ -69,6 +71,7 @@ volatile ringBufferStruct usart3Buf;
 volatile uint32_t pResendTime = 0;
 volatile uint32_t pMAC = 0;
 char pHash[9] = {0};
+char pHttpAddr[100] = {0};
 
 /* LED flag */
 volatile bool rs485Flag    = false;
@@ -109,9 +112,8 @@ int main(void)
   HAL_Init();
   __enable_irq();
 
-
   if(flashRead(FLASH_FLAG_START_ADDR) != 0)
-    nodeManager_initFlashData(1, 1);
+    nodeManager_initFlashData();
 
   findFlashPosition();
 
@@ -127,6 +129,9 @@ int main(void)
   MX_I2C4_Init();
 
   rtc.init();
+
+  if(DWT_Delay_Init()) DEBUG("DWT init FAIL!\r\n");
+  else                 DEBUG("DWT init OK\r\n");
 
   /* Setting rtc alert */
   if(pResendTime == 0 || pResendTime > 86400)
@@ -181,7 +186,7 @@ int main(void)
   writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.2.0 2021/05/20\r\n");
+  DEBUG("Version 1.3.0 2021/07/09\r\n");
 
   ringBuffer_new(&lpuart1Buf, lpuart1Data, lpuart1DataSize);
   ringBuffer_resetBuffer(&lpuart1Buf);
@@ -201,7 +206,6 @@ int main(void)
   powerOnRS485IC();
   // powerOnLora();
   EEPROM_EnableProtect();
-  NBIOT_PowerOn();
 
   MX_ADC1_Init();
   fsm_init();
@@ -298,16 +302,12 @@ void MX_GPIO_Init(void)
   /* NBIOT power */
   GPIO_InitStruct.Pin = ioNBIOTPower;
   LL_GPIO_Init(pNBIOTPower, &GPIO_InitStruct);
+  NBIOT_PowerOff();
 
   /* NBIOT PWR-ON */
   GPIO_InitStruct.Pin = ioNBIOT_PWR;
   LL_GPIO_Init(pNBIOT_PWR, &GPIO_InitStruct);
   LL_GPIO_SetOutputPin(pNBIOT_PWR, ioNBIOT_PWR);
-
-  /* NBIOT RESET-N */
-  // GPIO_InitStruct.Pin = ioNBIOT_RESET;
-  // LL_GPIO_Init(pNBIOT_RESET, &GPIO_InitStruct);
-  // LL_GPIO_SetOutputPin(pNBIOT_RESET, ioNBIOT_RESET);
 
   /* I2C protect pin */
   GPIO_InitStruct.Pin = ioEEPROMProtect;
@@ -321,6 +321,10 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
   LL_GPIO_Init(pNBIOT_VINT, &GPIO_InitStruct);
+
+  // /* Detect ublox or EXS62 (old : NBIOT RESET-N) */
+  // GPIO_InitStruct.Pin = ioDetectModule;
+  // LL_GPIO_Init(pDetectModule, &GPIO_InitStruct);
 }
 
 void TaskSystem(void * parameter) {
@@ -350,14 +354,6 @@ void TaskCLI(void *pvParameters) {
               memcpy(macStr, inputStringUart4.string + 1, 5);
               memcpy(pHash, inputStringUart4.string + 6, 8);
               uint32_t mac = strtol(macStr, NULL, 10);
-              uint32_t hash1 = (uint32_t)((uint8_t)(pHash[0]) << 24 |
-                                          (uint8_t)(pHash[1]) << 16 |
-                                          (uint8_t)(pHash[2]) << 8 |
-                                          (uint8_t)(pHash[3]));
-              uint32_t hash2 = (uint32_t)((uint8_t)(pHash[4]) << 24 |
-                                          (uint8_t)(pHash[5]) << 16 |
-                                          (uint8_t)(pHash[6]) << 8 |
-                                          (uint8_t)(pHash[7]));
               writeString(DEBUG_USART, "******* Change MAC to ");
               writeUint32(DEBUG_USART, mac);
               writeString(DEBUG_USART, " *******\r\n");
@@ -365,8 +361,8 @@ void TaskCLI(void *pvParameters) {
               writeString(DEBUG_USART, pHash);
               writeString(DEBUG_USART, " *******\r\n");
 
-              nodeManager_modifyMACandHash(mac, hash1, hash2);
-
+              nodeManager_modifyMAC(mac);
+              nodeManager_modifyHash(pHash);
               // rs485Flag = false;
           }
       }

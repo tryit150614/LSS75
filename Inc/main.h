@@ -95,7 +95,7 @@ void Error_Handler(void);
 #define pEEPROMProtect      GPIOB
 #define pNBIOTPower         GPIOB
 #define pNBIOT_PWR          GPIOB
-#define pNBIOT_RESET        GPIOB
+#define pDetectModule        GPIOB
 #define pNBIOT_VINT         GPIOB
 
 #define ioRS485Switch       LL_GPIO_PIN_11
@@ -108,7 +108,7 @@ void Error_Handler(void);
 #define ioEEPROMProtect     LL_GPIO_PIN_3
 #define ioNBIOTPower        LL_GPIO_PIN_8
 #define ioNBIOT_PWR         LL_GPIO_PIN_13
-#define ioNBIOT_RESET       LL_GPIO_PIN_14
+#define ioDetectModule       LL_GPIO_PIN_14
 #define ioNBIOT_VINT        LL_GPIO_PIN_15
 
 #define powerOnLora()             LL_GPIO_SetOutputPin(pLoraPower, ioLoraPower)
@@ -131,14 +131,18 @@ void Error_Handler(void);
 #define NBIOT_PowerOn()           LL_GPIO_SetOutputPin(pNBIOTPower, ioNBIOTPower)
 #define NBIOT_PowerOff()          LL_GPIO_ResetOutputPin(pNBIOTPower, ioNBIOTPower)
 /* USER CODE BEGIN Private defines */
-struct FlashDataStruct {
+struct ResendStruct {
   uint64_t resendTime;
 };
 
-struct FlashMACStruct {
+struct MACStruct {
   uint64_t mac;
   uint64_t hash1;
   uint64_t hash2;
+};
+
+struct HashStruct {
+  char hash[9];
 };
 
 struct FlashFlagStruct {

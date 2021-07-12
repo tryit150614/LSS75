@@ -7,11 +7,11 @@
 #include "nodeManager.h"
 #include "main.h"
 
-extern const unsigned long FlashDataStructSize;
-volatile uint32_t flashDataAddr = FLASH_USER_START_ADDR;
-volatile uint32_t flashMACAddr = FLASH_LORA_START_ADDR;
+extern const unsigned long ResendStructSize;
+volatile uint32_t flashResendAddr = FLASH_RESEND_START_ADDR;
+volatile uint32_t flashMACAddr = FLASH_MAC_START_ADDR;
 
-extern struct FlashDataStruct flashData;
+extern struct ResendStruct flashResend;
 extern volatile uint32_t pResendTime;
 extern volatile uint32_t pMAC;
 extern char pHash[9];
@@ -65,29 +65,29 @@ uint32_t flashWriteBlock(uint64_t * src) {
 
   HAL_FLASH_Unlock();
 
-  unsigned int loopIter = FlashDataStructSize / 8;
-  uint32_t addr = flashDataAddr;
+  unsigned int loopIter = ResendStructSize / 8;
+  uint32_t addr = flashResendAddr;
   
   for(int i = 1; i <= loopIter; i++) {
     /* Check next position is not limit.*/
-    if(addr + FlashDataStructSize >= FLASH_USER_END_ADDR) {
+    if(addr + ResendStructSize >= FLASH_RESEND_END_ADDR) {
       writeString(DEBUG_USART, "Over limit, erase all page.\r\n");
-      HAL_StatusTypeDef ret = flashErasePages(FLASH_TYPEERASE_PAGES, FLASH_USER_START_PAGE, FLASH_USER_END_PAGE);
+      HAL_StatusTypeDef ret = flashErasePages(FLASH_TYPEERASE_PAGES, FLASH_RESEND_START_PAGE, FLASH_RESEND_END_PAGE);
       if (ret != HAL_OK) {
         writeString(DEBUG_USART, "Flash erase fail.\r\n");
       }
 
-      addr = FLASH_USER_START_ADDR;
+      addr = FLASH_RESEND_START_ADDR;
       i = 0;
     }
     else {
       /* clear old data */
       HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, addr, 0);
       /* write new data */
-      HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, addr + FlashDataStructSize, src[i - 1]);
+      HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, addr + ResendStructSize, src[i - 1]);
 
       /* Check the written value */
-      if(*(uint64_t*)(addr + FlashDataStructSize) != src[i - 1])
+      if(*(uint64_t*)(addr + ResendStructSize) != src[i - 1])
       {
           /* Write data again from flashTitle */
           writeString(DEBUG_USART, "flash write fail, rewrite from flashTitle.\r\n");
@@ -100,11 +100,11 @@ uint32_t flashWriteBlock(uint64_t * src) {
     }
   }
 
-  // flashDataAddr   = addr;
+  // flashResendAddr   = addr;
   // if(writeCount   < 10) {
   //   writeCount    = 0;
-  //   pStart        = flashRead(flashDataAddr);
-  //   pResendTime   = flashRead(flashDataAddr + 8);
+  //   pStart        = flashRead(flashResendAddr);
+  //   pResendTime   = flashRead(flashResendAddr + 8);
   // }
   // else {
   //   writeCount = 0;
@@ -116,9 +116,9 @@ uint32_t flashWriteBlock(uint64_t * src) {
   return 0;
 }
 
-uint32_t flashReadBlock(void * flashAddress, uint64_t * dest, unsigned int numbBytes) {
+uint32_t flashReadBlock(uint32_t flashAddress, uint64_t * dest, unsigned int numbBytes) {
   unsigned int loopIter = numbBytes / 8;
-  uint32_t addr =  (uint32_t) flashAddress;
+  uint32_t addr = flashAddress;
   for(int i = 0; i < loopIter; i++) {
     dest[i] = flashRead(addr);
     addr = addr + 8;
@@ -138,29 +138,19 @@ HAL_StatusTypeDef flashErasePages(uint8_t typeErase, uint32_t startPage, uint32_
   return (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError));
 }
 
-uint32_t flashRead(uint32_t flashAddress) {
-    __IO uint32_t flashData;
+uint64_t flashRead(uint32_t flashAddress) {
+    __IO uint64_t flashData;
 
-    flashData = * (__IO uint32_t *) flashAddress;
+    flashData = * (__IO uint64_t *) flashAddress;
 
     return flashData;
 }
 
 void findFlashPosition() {
 
-  pResendTime = flashRead(FLASH_USER_START_ADDR);
-  pMAC = flashRead(flashMACAddr + 0);
-  uint32_t hash1 = flashRead(flashMACAddr + 8);
-  uint32_t hash2 = flashRead(flashMACAddr + 16);
-
-  pHash[0] = (hash1 >> 24) & 0xFF;
-  pHash[1] = (hash1 >> 16) & 0xFF;
-  pHash[2] = (hash1 >> 8) & 0xFF;
-  pHash[3] = hash1 & 0xFF;
-  pHash[4] = (hash2 >> 24) & 0xFF;
-  pHash[5] = (hash2 >> 16) & 0xFF;
-  pHash[6] = (hash2 >> 8) & 0xFF;
-  pHash[7] = hash2 & 0xFF;
+  pResendTime = flashRead(FLASH_RESEND_START_ADDR);
+  pMAC = flashRead(FLASH_MAC_START_ADDR);
+  flashReadBlock(FLASH_HASH_START_ADDR, (uint64_t *)pHash, ResendStructSize);
 }
 
 void resetFlashParameter() {

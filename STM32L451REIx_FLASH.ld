@@ -62,7 +62,8 @@ _Min_Stack_Size = 0x1000; /* required amount of stack */
 MEMORY
 {
 RAM (xrw)        : ORIGIN = 0x20000000, LENGTH = 160K
-FLASH_BOOT (rx)  : ORIGIN = 0x8010000,  LENGTH = 128K
+FLASH_BOOT (rx)  : ORIGIN = 0x8000000,  LENGTH = 128K
+HASH   (rxw)     : ORIGIN = 0x807C800,  LENGTH = 2K
 UFLASH (rxw)     : ORIGIN = 0x807D800,  LENGTH = 2K
 FLAG (rxw)       : ORIGIN = 0x807E800,  LENGTH = 2K
 LORA (rxw)       : ORIGIN = 0x807F800,  LENGTH = 2K
@@ -149,6 +150,11 @@ SECTIONS
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
+
+  .hash :
+  {
+  *(.hash*);
+  } > HASH
 
   .uflash :
   {

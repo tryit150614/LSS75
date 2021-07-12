@@ -15,6 +15,9 @@
 #include "eeprom.h"
 #include "st_rtc.h"
 #include "st_watchdog.h"
+#include "EXS62.h"
+#include "SARA-R410M.h"
+#include "delay.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -95,7 +98,9 @@ static char rawData_Leaf[9 * 2 + 1]      = {0};
 static char batV[10] = {0}, solarV[10]   = {0}, innerT[10] = {0};
 static uint8_t loraResendCount  = 0;
 // static uint8_t sendSuccessCount = 0;
-static bool    eepromMode       = false;
+static bool eepromMode       = false;
+
+static bool isCatM = false;
 // Declare private functions---------
 static void voltToTemperature(float tempVolt, char * tempStr);
 static void floatToString(float value, char * str, int dot);
@@ -115,6 +120,9 @@ void fsm_init()
 
 funcptr fsm_idle()
 {
+  /* Enable Module's power */
+  NBIOT_PowerOn();
+
   return (funcptr)fsm_getADCValue;
 }
 
@@ -551,18 +559,93 @@ funcptr fsm_getRS485Data()
   }
 
   DEBUG("----------------------------------\r\n");
-  return (funcptr)nb_idle;
+  return (funcptr)fsm_checkModule;
 }
 
-funcptr nb_idle()
-{
-  NBIOT_PowerOn();
-  nbiotFindIPFlag = true;
-  LL_GPIO_ResetOutputPin(pNBIOT_PWR, ioNBIOT_PWR);
-  vTaskDelay(pdMS_TO_TICKS(3200));
-  LL_GPIO_SetOutputPin(pNBIOT_PWR, ioNBIOT_PWR);
-  vTaskDelay(pdMS_TO_TICKS(1300));
 
+funcptr fsm_checkModule()
+{
+  uint32_t start = HAL_GetTick();
+  uint32_t current = HAL_GetTick();
+  if(exs62_ready()) {
+    DEBUG(">> CatM module <<\r\n");
+    current = HAL_GetTick();
+    DEBUG("Spend : ");writeUint32(DEBUG_USART, current - start);DEBUG("\r\n");
+    isCatM = true;
+
+    if(exs62_setHttp()) {
+      DEBUG("Setting http OK\r\n");
+      return (funcptr)nb_getSignalPower;
+    }
+    else {
+      DEBUG("Setting http Fail\r\n");
+      NBIOT_PowerOn();
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      return (funcptr)fsm_checkModule;
+    }
+  }
+  else {
+    DEBUG(">> nblox <<\r\n");
+    nbiotFindIPFlag = true;
+    sara_ready();
+  }
+
+  return (funcptr)nb_waitIP;
+}
+
+funcptr nb_waitIP() {
+  static int waitIPCount = 0;
+  if(isCatM)
+  {
+    writeString(DEBUG_USART, "(UART) AT+COPS?\r\n");
+    writeString(LPUART1, "AT+COPS?\r\n");
+
+    /* 確認是否已註冊網路 */
+    if(nbiot_getResponse(2, "+COPS: 0,0,"))
+    {
+      DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
+      nbiotFindIPFlag = false;
+      nbiotGetIPFlag = true;
+      waitIPCount = 0;
+      return (funcptr)nb_getSignalPower;
+    }
+    else
+    {
+      waitIPCount++;
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      if(waitIPCount >= 600) {
+        waitIPCount = 0;
+        noConnectFlag = true;
+        DEBUG("Doesn't get IP.\r\n");     
+        return (funcptr)nb_getSignalPower;
+      }
+    }
+  }
+  else
+  {
+    writeString(DEBUG_USART, "(UART) AT+CGDCONT?\r\n");
+    writeString(LPUART1, "AT+CGDCONT?\r\n");
+
+    if(nbiot_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
+    { /* 尚未註冊 */
+      waitIPCount++;
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      if(waitIPCount >= 600) {
+        waitIPCount = 0;
+        noConnectFlag = true;
+        DEBUG("Doesn't get IP.\r\n");     
+        return (funcptr)nb_getSignalPower;
+      }
+    }
+    else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
+    { /* 已經註冊 */
+      DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
+      nbiotFindIPFlag = false;
+      nbiotGetIPFlag = true;
+      waitIPCount = 0;
+      return (funcptr)nb_getSignalPower;
+    }
+  }
 
   return (funcptr)nb_waitIP;
 }
@@ -572,25 +655,50 @@ funcptr nb_getSignalPower() {
 
   char msg[100] = {0};
   /* Get power */
-  writeString(DEBUG_USART, "(UART) AT+CSQ\r\n");
-  writeString(LPUART1, "AT+CSQ\r\n");
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  const uint32_t timeout = 1000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      strcat(msg, inputStringLpuart1.string);
+  if(!isCatM) { // Ublox
+    writeString(DEBUG_USART, "(UART) AT+VZWRSRP?\r\n");
+    writeString(LPUART1, "AT+VZWRSRP?\r\n");
+    HAL_Delay(50);
+    if(exs62_getResponse(1, "+VZWRSRP:")) {
+      char *str;
+      strtok(inputStringLpuart1.string, ",");
+      strtok(inputStringLpuart1.string, ",");
+      strtok(inputStringLpuart1.string, ",\"");
+      str = strtok(inputStringLpuart1.string, ".");
+      memset(signalPower, 0, sizeof(signalPower));
+      memcpy(signalPower, str, strnlen(str, 4));
+    } else {
+      memset(signalPower, 0, sizeof(signalPower));
+      signalPower[0] = '0';
+    }
+  }else { // Cat M
+    sendCmd("AT^SMONI\r\n");
+    HAL_Delay(50);
+    if(exs62_getResponse(1, "^SMONI:")) {
+      // RSRP於第12格
+      char *str;
+      strtok(inputStringLpuart1.string, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      strtok(nullptr, ",");
+      str = strtok(nullptr, ","); // rssi
+
+      memcpy(signalPower, str, strnlen(str, 4));
+    } else {
+      memset(signalPower, 0, sizeof(signalPower));
+      signalPower[0] = '0';
     }
   }
 
-  signalPower[0] = msg[15];
-  if(msg[16] != ',') signalPower[1] = msg[16];
+  DEBUG("RSSI = ");DEBUG(signalPower);DEBUG("\r\n");
 
   return (funcptr)nb_writeNewDataInBuffer;
 }
@@ -637,35 +745,6 @@ funcptr nb_writeNewDataInBuffer() {
   return (funcptr)nb_checkEEPROM;
 }
 
-funcptr nb_waitIP() {
-  static int waitIPCount = 0;
-  char msg[200] = {0};
-  writeString(DEBUG_USART, "(UART) AT+CGDCONT?\r\n");
-  writeString(LPUART1, "AT+CGDCONT?\r\n");
-
-  if(nbiot_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
-  { /* 尚未註冊 */
-    waitIPCount++;
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    if(waitIPCount >= 600) {
-      waitIPCount = 0;
-      noConnectFlag = true;
-      DEBUG("Doesn't get IP.\r\n");     
-      return (funcptr)nb_getSignalPower;
-    }
-  }
-  else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
-  { /* 已經註冊 */
-    DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
-    nbiotFindIPFlag = false;
-    nbiotGetIPFlag = true;
-    waitIPCount = 0;
-    return (funcptr)nb_getSignalPower;
-  }
-
-  return (funcptr)nb_waitIP;
-}
-
 static uint32_t dataPos = 1;
 funcptr nb_checkEEPROM() {
   // Check eeprom have data or not
@@ -704,75 +783,14 @@ funcptr nb_checkEEPROM() {
 
 funcptr nb_writeDataInNBIOT() {
 
-  /* {\"num\":50,\"records\":[{....}]} */
   char tempArray[12000] = {0};
   int len = sprintf(tempArray, "{\"num\":%lu,\"records\":[%s]}",
             amountOfData,
             readySendData
             );
-  // DEBUG("Fianl array is ready.\r\n");
 
-  /* Delete data and rp in file system */
-  writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"data1\"\r\n");
-  writeString(LPUART1, "AT+UDELFILE=\"data1\"\r\n");
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  uint32_t timeout = 2000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-    }
-  }
-  
-  /* Write data into file system */
-  writeString(DEBUG_USART, "(UART) AT+UDWNFILE=\"data1\",");
-  writeUint32(DEBUG_USART, len);
-  writeString(DEBUG_USART, "\r\n");
-
-  writeString(LPUART1, "AT+UDWNFILE=\"data1\",");
-  writeUint32(LPUART1, len);
-  writeString(LPUART1, "\r\n");
-
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      // strcat(msg, inputStringLpuart1.string);
-    }
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(2000));
-  dog.reload();
-  writeString(LPUART1, tempArray);  
-  writeString(LPUART1, "\r\n");  
-
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      // strcat(msg, inputStringLpuart1.string);
-    }
-  }
-
+  sara_writeInFileSystem(tempArray, len);
   vTaskDelay(pdMS_TO_TICKS(1000));
-  // memset(msg, 0, sizeof(msg));
 
   return (funcptr)nb_initHttp;
 }
@@ -1125,8 +1143,89 @@ funcptr nb_getResponse()
   return (funcptr)fsm_sleep;
 }
 
-funcptr fsm_checkDataInEEPROM() {
-  
+funcptr catM_Connect_And_Send() {
+  char tempArray[12000] = {0};
+  int newPayloadLen = sprintf(tempArray, "{\"num\":%lu,\"records\":[%s]}",
+            amountOfData,
+            readySendData
+            );
+
+  // 設定資料長度
+  char cmd[100] = {0};
+  sprintf(cmd, "AT^SISS=6,\"hcContLen\",\"%lu\"\r\n", newPayloadLen);
+  sendCmd(cmd);
+  if(!exs62_getResponse(3, "OK"))
+  {
+    DEBUG("Setting hcContLen fail!\r\n");
+  }
+  else
+    DEBUG("Setting hcContLen OK\r\n");
+
+  // 開啟連線 + 寫資料 + 傳送
+  sendCmd("AT^SISO=6\r\n");
+  if(!exs62_getResponse(5, "^SISW: 6,1"))
+  {
+    DEBUG("AT^SISO=6 fail!\r\n");
+    sendCmd("AT^SISO=6\r\n");
+    if(!exs62_getResponse(5, "^SISW: 6,1"))
+    {
+      DEBUG("AT^SISO=6 fail again!\r\n");
+      NBIOT_PowerOn();
+      vTaskDelay(pdMS_TO_TICKS(500));
+      return (funcptr)fsm_idle;
+    }
+  }
+  else
+  {
+    DEBUG("AT^SISO OK\r\n");
+  }
+  memset(inputStringLpuart1.string, 0, sizeof(inputStringLpuart1.string));
+  memset(cmd, 0, sizeof(cmd));
+
+  DEBUG("LEN = ");writeUint32(DEBUG_USART, newPayloadLen);DEBUG("\r\n");
+  DEBUG("Ready to write data ...\r\n");
+  if(newPayloadLen <= 1500)
+  {
+    sprintf(cmd, "AT^SISW=6,%lu\r\n", newPayloadLen);
+    sendCmd(cmd);
+    HAL_Delay(50);
+    sendCmd(newData);
+    // sendCmd(finalPayload);
+  }
+  else
+  {
+    char * pData = tempArray;
+    uint8_t count = newPayloadLen / 1500;
+    uint32_t len = newPayloadLen;
+    DEBUG("Count = ");writeUint32(DEBUG_USART, count);DEBUG("\r\n");
+    for(int i = 0; i < count; i++)
+    {
+      sendCmd("AT^SISW=6,1500\r\n");
+      HAL_Delay(50);
+      writeData(LPUART1, pData, 1500);
+      pData += 1500;
+      len -= 1500;
+
+      if(exs62_getResponse(3, "SISW: 6,1"))
+      {
+        DEBUG("Send OK\r\n");
+        continue;
+      }
+      else
+      {
+        DEBUG("Send Fail\r\n");
+        break;
+      }
+    }
+
+    sprintf(cmd, "AT^SISW=6,%lu\r\n", len);
+    sendCmd(cmd);
+    HAL_Delay(50);
+    // sendCmd(newData);
+    writeData(LPUART1, pData, len);
+  }
+
+  return (funcptr)nb_getResponse;
 }
 
 funcptr fsm_sleep() {
@@ -1201,22 +1300,22 @@ static void transmitRS485(uint8_t * deviceNumber){
   HAL_Delay(10);
 
   LL_USART_TransmitData8(USART3,deviceNumber[0]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[1]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[2]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[3]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[4]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[5]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[6]);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
   LL_USART_TransmitData8(USART3,deviceNumber[7]);
-  writeInt(DEBUG_USART, 1);
-  writeInt(DEBUG_USART, 1);
+  DWT_Delay_us(1042);
+  DWT_Delay_us(1042);
 
   //turn to receive status
   RS485_Receive();

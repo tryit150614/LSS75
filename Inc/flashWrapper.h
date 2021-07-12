@@ -295,17 +295,21 @@ extern "C" {
 /* Page full define */
 #define PAGE_FULL             ((uint8_t)0x80)
 
-#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_251
-#define FLASH_USER_END_ADDR     ADDR_FLASH_PAGE_252   
-#define FLASH_LORA_START_ADDR   ADDR_FLASH_PAGE_253   
-#define FLASH_LORA_END_ADDR     ADDR_FLASH_PAGE_254
+#define FLASH_HASH_START_ADDR   ADDR_FLASH_PAGE_249
+#define FLASH_HASH_END_ADDR     ADDR_FLASH_PAGE_250
+#define FLASH_RESEND_START_ADDR ADDR_FLASH_PAGE_251
+#define FLASH_RESEND_END_ADDR   ADDR_FLASH_PAGE_252   
+#define FLASH_MAC_START_ADDR    ADDR_FLASH_PAGE_253   
+#define FLASH_MAC_END_ADDR      ADDR_FLASH_PAGE_254
 #define FLASH_FLAG_START_ADDR   ADDR_FLASH_PAGE_255
 #define FLASH_FLAG_END_ADDR     ADDR_FLASH_PAGE_256
 
-#define FLASH_USER_START_PAGE   251
-#define FLASH_USER_END_PAGE     252
-#define FLASH_LORA_START_PAGE   253
-#define FLASH_LORA_END_PAGE     254
+#define FLASH_HASH_START_PAGE   249
+#define FLASH_HASH_END_PAGE     250
+#define FLASH_RESEND_START_PAGE 251
+#define FLASH_RESEND_END_PAGE   252
+#define FLASH_MAC_START_PAGE    253
+#define FLASH_MAC_END_PAGE      254
 #define FLASH_FLAG_START_PAGE   255
 #define FLASH_FLAG_END_PAGE     256
 
@@ -317,9 +321,9 @@ void findFlashPosition();
 uint32_t flashWriteBlock_first(uint64_t * src, uint32_t destAddr, unsigned int numbBytes);
 uint32_t flashWriteBlock_with_erase(uint64_t * src, uint32_t destAddr, unsigned int numbBytes, uint32_t start_page, uint32_t end_page);
 uint32_t flashWriteBlock(uint64_t * src);
-uint32_t flashReadBlock(void * flashAddress, uint64_t * dest, unsigned int numbBytes);
+uint32_t flashReadBlock(uint32_t flashAddress, uint64_t * dest, unsigned int numbBytes);
 HAL_StatusTypeDef flashErasePages(uint8_t typeErase, uint32_t startPage, uint32_t endPage );
-uint32_t flashRead(uint32_t flashAddress);
+uint64_t flashRead(uint32_t flashAddress);
 void resetFlashParameter();
 
 #ifdef __cplusplus

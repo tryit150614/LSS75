@@ -7,36 +7,37 @@
 #include "flashWrapper.h"
 #include "main.h"
 
-extern volatile uint32_t flashDataAddr;
-extern volatile uint32_t flashMACAddr;
-extern struct FlashDataStruct flashData;
-extern struct FlashMACStruct flashMAC;
+extern struct ResendStruct flashResend;
+extern struct MACStruct flashMAC;
+extern struct HashStruct flashHASH;
 extern struct FlashFlagStruct flashFlag;
 extern volatile uint32_t pResendTime;
 extern volatile uint32_t pMAC;
 extern char pHash[9];
 
-struct FlashDataStruct tempFlashDataStruct;
-struct FlashMACStruct tempFlashMACStruct;
+struct ResendStruct tempResendStruct;
+struct MACStruct tempMACStruct;
+struct HashStruct tempHashStruct;
 struct FlashFlagStruct tempFlashFlagStruct;
-const unsigned long FlashDataStructSize = sizeof(flashData);
-const unsigned long FlashMACStructSize = sizeof(flashMAC);
+const unsigned long ResendStructSize = sizeof(flashResend);
+const unsigned long MACStructSize = sizeof(flashMAC);
+const unsigned long HashStructSize = sizeof(flashHASH);
 const unsigned long FlashFlagStructSize = sizeof(flashFlag);
 
 static uint64_t flashAccessBuffer[FLASH_ACCESS_BUFFER_SIZE];
 
-void nodeManager_initFlashData(uint8_t userInit, uint8_t flagInit) {
-  if(userInit) {
-    memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-    memcpy(flashAccessBuffer, &flashData, FlashDataStructSize);
-    flashWriteBlock_first(flashAccessBuffer, flashDataAddr, FlashDataStructSize);
-  }
+void nodeManager_initFlashData() {
+  memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
+  memcpy(flashAccessBuffer, &flashResend, ResendStructSize);
+  flashWriteBlock_first(flashAccessBuffer, FLASH_RESEND_START_ADDR, ResendStructSize);
 
-  if(flagInit) {
-    memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-    memcpy(flashAccessBuffer, &flashMAC, FlashMACStructSize);
-    flashWriteBlock_first(flashAccessBuffer, flashMACAddr, FlashMACStructSize);
-  }
+  memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
+  memcpy(flashAccessBuffer, &flashMAC, MACStructSize);
+  flashWriteBlock_first(flashAccessBuffer, FLASH_MAC_START_ADDR, MACStructSize);
+
+  memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
+  memcpy(flashAccessBuffer, &flashHASH, HashStructSize);
+  flashWriteBlock_first(flashAccessBuffer, FLASH_HASH_START_ADDR, HashStructSize);
 }
 
 void nodeManager_riseInitFlag() {
@@ -52,29 +53,43 @@ void nodeManager_riseInitFlag() {
 
 void nodeManager_changeResendTime(uint64_t newResendTime){
    memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-   memcpy(&tempFlashDataStruct, flashAccessBuffer, FlashDataStructSize);
+   memcpy(&tempResendStruct, flashAccessBuffer, ResendStructSize);
 
-   tempFlashDataStruct.resendTime = newResendTime;
+   tempResendStruct.resendTime = newResendTime;
    pResendTime = newResendTime;
 
    memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-   memcpy(flashAccessBuffer, &tempFlashDataStruct, FlashDataStructSize);
-   flashWriteBlock_with_erase(flashAccessBuffer, FLASH_USER_START_ADDR, FlashDataStructSize, FLASH_USER_START_PAGE, FLASH_USER_END_PAGE);
+   memcpy(flashAccessBuffer, &tempResendStruct, ResendStructSize);
+   flashWriteBlock_with_erase(flashAccessBuffer, FLASH_RESEND_START_ADDR, ResendStructSize, FLASH_RESEND_START_PAGE, FLASH_RESEND_END_PAGE);
 }
 
-void nodeManager_modifyMACandHash(uint64_t mac, uint64_t hash1, uint64_t hash2) {
+void nodeManager_modifyMAC(uint64_t mac) {
 
   memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-  memcpy(&tempFlashMACStruct, flashAccessBuffer, FlashMACStructSize);
+  memcpy(&tempMACStruct, flashAccessBuffer, MACStructSize);
 
-  tempFlashMACStruct.mac = mac;
-  tempFlashMACStruct.hash1 = hash1;
-  tempFlashMACStruct.hash2 = hash2;
-
-  pMAC = tempFlashMACStruct.mac;
+  tempMACStruct.mac = mac;
+  pMAC = tempMACStruct.mac;
   /* pHash is changed on cli.cpp */
 
   memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
-  memcpy(flashAccessBuffer, &tempFlashMACStruct, FlashMACStructSize);
-  flashWriteBlock_with_erase(flashAccessBuffer, flashMACAddr, FlashMACStructSize, FLASH_LORA_START_PAGE, FLASH_LORA_END_PAGE);
+  memcpy(flashAccessBuffer, &tempMACStruct, MACStructSize);
+  flashWriteBlock_with_erase(flashAccessBuffer, FLASH_MAC_START_ADDR, MACStructSize, FLASH_MAC_START_PAGE, FLASH_MAC_END_PAGE);
+}
+
+void nodeManager_modifyHash(char * newHash) {
+
+  memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
+  memcpy(&tempHashStruct, flashAccessBuffer, HashStructSize);
+
+  memset(tempHashStruct.hash, 0, 8);
+  memcpy(tempHashStruct.hash, newHash, 8);
+
+  memset(pHash, 0, 8);
+  memcpy(pHash, newHash, 8);
+  /* pHash is changed on cli.cpp */
+
+  memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));
+  memcpy(flashAccessBuffer, &tempHashStruct, HashStructSize);
+  flashWriteBlock_with_erase(flashAccessBuffer, FLASH_HASH_START_ADDR, HashStructSize, FLASH_HASH_START_PAGE, FLASH_HASH_END_PAGE);
 }

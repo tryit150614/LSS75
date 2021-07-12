@@ -14,6 +14,7 @@
         "cstdlib": "c",
         "fsm_nbiot.h": "c",
         "st_watchdog.h": "c",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "eeprom.h": "c"
     }
 }
