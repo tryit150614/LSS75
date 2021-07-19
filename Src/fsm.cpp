@@ -77,7 +77,7 @@ uint32_t tempTimestamp    = 0;
 char connectIP[] = "\"35.187.150.128\"";
 char connectPort[] = "80";
 char connectPath[100] = "\"/api/6th-nbiot\"";
-char signalPower[3] = {0};
+char signalPower[5] = {0};
 //////////////////////////////
 
 struct FSMAttributes fsmAttributes;
@@ -106,7 +106,6 @@ static void voltToTemperature(float tempVolt, char * tempStr);
 static void floatToString(float value, char * str, int dot);
 static void transmitRS485(uint8_t * deviceNumber);
 static void getRS485Data(char * deviceData, int receiveDataLen);
-static int nbiot_getResponse(int sec, char* target);
 //-----------------------------------
 
 void fsm_init()
@@ -575,62 +574,58 @@ funcptr fsm_checkModule()
 
     if(exs62_setHttp()) {
       DEBUG("Setting http OK\r\n");
-      return (funcptr)nb_getSignalPower;
     }
     else {
       DEBUG("Setting http Fail\r\n");
-      NBIOT_PowerOn();
+      NBIOT_PowerOff();
       vTaskDelay(pdMS_TO_TICKS(1000));
+      NBIOT_PowerOn();
+      vTaskDelay(pdMS_TO_TICKS(10000));
       return (funcptr)fsm_checkModule;
     }
   }
   else {
-    DEBUG(">> nblox <<\r\n");
-    nbiotFindIPFlag = true;
+    DEBUG(">> nblox module <<\r\n");
     sara_ready();
+
+    if(sara_setHttp()) {
+      DEBUG("Setting http OK\r\n");
+    }
+    else {
+      DEBUG("Setting http Fail\r\n");
+      NBIOT_PowerOff();
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      return (funcptr)fsm_checkModule;
+    }
   }
 
+  nbiotFindIPFlag = true;
   return (funcptr)nb_waitIP;
 }
 
 funcptr nb_waitIP() {
-  static int waitIPCount = 0;
+  static uint32_t waitIPCount = 0;
   if(isCatM)
   {
-    writeString(DEBUG_USART, "(UART) AT+COPS?\r\n");
-    writeString(LPUART1, "AT+COPS?\r\n");
+   if(exs62_connectNetwork()) {
+      noConnectFlag = false;
+    } else {
+      DEBUG("Connect network fail\r\n");
+      noConnectFlag = true;
+    }
 
-    /* 確認是否已註冊網路 */
-    if(nbiot_getResponse(2, "+COPS: 0,0,"))
-    {
-      DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
-      nbiotFindIPFlag = false;
-      nbiotGetIPFlag = true;
-      waitIPCount = 0;
-      return (funcptr)nb_getSignalPower;
-    }
-    else
-    {
-      waitIPCount++;
-      vTaskDelay(pdMS_TO_TICKS(1000));
-      if(waitIPCount >= 600) {
-        waitIPCount = 0;
-        noConnectFlag = true;
-        DEBUG("Doesn't get IP.\r\n");     
-        return (funcptr)nb_getSignalPower;
-      }
-    }
+    return (funcptr)nb_getSignalPower;
   }
   else
   {
     writeString(DEBUG_USART, "(UART) AT+CGDCONT?\r\n");
     writeString(LPUART1, "AT+CGDCONT?\r\n");
 
-    if(nbiot_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
+    if(sara_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
     { /* 尚未註冊 */
       waitIPCount++;
       vTaskDelay(pdMS_TO_TICKS(1000));
-      if(waitIPCount >= 600) {
+      if(waitIPCount >= 300) {
         waitIPCount = 0;
         noConnectFlag = true;
         DEBUG("Doesn't get IP.\r\n");     
@@ -639,7 +634,7 @@ funcptr nb_waitIP() {
     }
     else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
     { /* 已經註冊 */
-      DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount * 2);DEBUG("\r\n");
+      DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount);DEBUG("\r\n");
       nbiotFindIPFlag = false;
       nbiotGetIPFlag = true;
       waitIPCount = 0;
@@ -651,25 +646,32 @@ funcptr nb_waitIP() {
 }
 
 funcptr nb_getSignalPower() {
-  // DEBUG("Get signal power\r\n");
-
   char msg[100] = {0};
+  memset(signalPower, 0, sizeof(signalPower));
   /* Get power */
   if(!isCatM) { // Ublox
-    writeString(DEBUG_USART, "(UART) AT+VZWRSRP?\r\n");
-    writeString(LPUART1, "AT+VZWRSRP?\r\n");
     HAL_Delay(50);
-    if(exs62_getResponse(1, "+VZWRSRP:")) {
+    writeString(DEBUG_USART, "(UART) AT+CESQ\r\n");
+    writeString(LPUART1, "AT+CESQ\r\n");
+    if(sara_getResponse(1, "+CESQ: ")) {
       char *str;
       strtok(inputStringLpuart1.string, ",");
-      strtok(inputStringLpuart1.string, ",");
-      strtok(inputStringLpuart1.string, ",\"");
-      str = strtok(inputStringLpuart1.string, ".");
-      memset(signalPower, 0, sizeof(signalPower));
-      memcpy(signalPower, str, strnlen(str, 4));
+      strtok(NULL, ",");
+      strtok(NULL, ",");
+      strtok(NULL, ",");
+      strtok(NULL, ",");
+      str = strtok(NULL, ",");
+      if(memcmp(str, "99", 2) == 0 || memcmp(str, "255", 3) == 0) {
+        signalPower[0] = '9';
+        signalPower[1] = '9';
+      } else {
+        int rssiVal = strtol(str, NULL, 10) - 111;
+        // int rssiVal = strtol(str, NULL, 10);
+        sprintf(signalPower, "%d", rssiVal);
+      }
     } else {
-      memset(signalPower, 0, sizeof(signalPower));
-      signalPower[0] = '0';
+      signalPower[0] = '9';
+      signalPower[1] = '9';
     }
   }else { // Cat M
     sendCmd("AT^SMONI\r\n");
@@ -678,7 +680,6 @@ funcptr nb_getSignalPower() {
       // RSRP於第12格
       char *str;
       strtok(inputStringLpuart1.string, ",");
-      strtok(nullptr, ",");
       strtok(nullptr, ",");
       strtok(nullptr, ",");
       strtok(nullptr, ",");
@@ -751,7 +752,7 @@ funcptr nb_checkEEPROM() {
   uint8_t eepromData[payloadLen + 1] = {0};
   uint32_t addr = eepromFlag.nextSendAddress + (dataPos - 1) * payloadLen;
   if(addr >= MAX_EEPROM_SIZE) {
-    DEBUG("Over max size, eeprom addr turn to 256.\r\n");
+    DEBUG("Over max size, eeprom addr turn to 384.\r\n");
     addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
   }
   bool sts = parLoad(eepromData, addr, payloadLen);
@@ -789,194 +790,27 @@ funcptr nb_writeDataInNBIOT() {
             readySendData
             );
 
-  sara_writeInFileSystem(tempArray, len);
-  vTaskDelay(pdMS_TO_TICKS(1000));
-
-  return (funcptr)nb_initHttp;
-}
-
-static uint8_t reInitCount = 0;
-funcptr nb_initHttp()
-{
-  // DEBUG("Enter init http\r\n");
-  vTaskDelay(pdMS_TO_TICKS(1000));
-
-  uint8_t result = 0;
-  /* Setting http server IP */
-  writeString(LPUART1, "AT+UHTTP=0,0,");
-  writeString(LPUART1, connectIP);
-  writeString(LPUART1, "\r\n");
-
-  writeString(DEBUG_USART, "(UART) AT+UHTTP=0,0,");
-  writeString(DEBUG_USART, connectIP);
-  writeString(DEBUG_USART, "\r\n");
-
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  const uint32_t timeout = 5000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      char * detectStr = strstr(inputStringLpuart1.string, "OK");
-      if(detectStr != NULL) {
-        result++;
-        break;
-      }
-    }
+  if(!isCatM) {
+    if(sara_writeInFileSystem(tempArray, len)) DEBUG("Write in filesystem OK\r\n");
+    else                                       DEBUG("Fail to write data in filesystem\r\n");
+  } else {
+    if(!exs62_preparePayload_Connect(len)) DEBUG("exs62_preparePayload_Connect fail\r\n");
+    if(!exs62_http_send(tempArray, len))   DEBUG("exs62_http_send fail\r\n");
+    return (funcptr)catM_getResponse;
   }
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-  dog.reload();
-
-  /* Setting http server Port */
-  writeString(LPUART1, "AT+UHTTP=0,5,");
-  writeString(LPUART1, connectPort);
-  writeString(LPUART1, "\r\n");
-
-  writeString(DEBUG_USART, "(UART) AT+UHTTP=0,5,");
-  writeString(DEBUG_USART, connectPort);
-  writeString(DEBUG_USART, "\r\n");
-
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      char * detectStr = strstr(inputStringLpuart1.string, "OK");
-      if(detectStr != NULL) {
-        result++;
-        break;
-      }
-    }
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-
-  /* Setting http server header */
-  writeString(DEBUG_USART, "(UART) AT+UHTTP=0,9,\"0:Content-Type:application/json\"\r\n");
-  writeString(LPUART1, "AT+UHTTP=0,9,\"0:Content-Type:application/json\"\r\n");
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      char * detectStr = strstr(inputStringLpuart1.string, "OK");
-      if(detectStr != NULL) {
-        result++;
-        break;
-      }
-    }
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-
-  writeString(DEBUG_USART, "(UART) AT+UHTTP=0,9,\"1:Accept:application/json\"\r\n");
-  writeString(LPUART1, "AT+UHTTP=0,9,\"1:Accept:application/json\"\r\n");
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      char * detectStr = strstr(inputStringLpuart1.string, "OK");
-      if(detectStr != NULL) {
-        result++;
-        break;
-      }
-    }
-  }
-
-  if(result != 4 && reInitCount == 0) {
-    DEBUG("Init http FAIL, reInit.\r\n");
-    reInitCount++;
-    return (funcptr)nb_initHttp;
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-  dog.reload();
-
-  writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"rp1\"\r\n");
-  writeString(LPUART1, "AT+UDELFILE=\"rp1\"\r\n");
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      char * detectStr = strstr(inputStringLpuart1.string, "OK");
-      if(detectStr != NULL) break;
-    }
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-  dog.reload();
 
   return (funcptr)nb_sendData;
 }
 
 funcptr nb_sendData() {
-
-  /* Send data */
-  writeString(DEBUG_USART, "(UART) AT+UHTTPC=0,4,");
-  writeString(DEBUG_USART, connectPath);
-  writeString(DEBUG_USART, ",\"rp1\",\"data1\",4\r\n");
-
-  writeString(LPUART1, "AT+UHTTPC=0,4,");
-  writeString(LPUART1, connectPath);
-  writeString(LPUART1, ",\"rp1\",\"data1\",4\r\n");
-
-  char msg[1000] = {0};
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  uint32_t timeout = 3000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
-    {
-      inputStringLpuart1.ready = 0;
-      strcat(msg, inputStringLpuart1.string);
-    }
-  }
-
-  vTaskDelay(pdMS_TO_TICKS(1000));
-
-  char *str      = strstr(msg, "OK");
-  char *errorMsg = strstr(msg, "422 Unprocessable");
-  if(str != NULL) { /* Send command successful */
+  int result = sara_http_send();
+  if(result == 0) { // Success
     DEBUG("Send is OK\r\n");
     vTaskDelay(pdMS_TO_TICKS(2000));
     return (funcptr)nb_getResponse;
   }
-  else if(errorMsg != NULL) {
+  else if(result == 1) { // 422
     DEBUG("Get 422 status\r\n");
-    nbiotGetIPFlag = false;
-    getOKFlag = true;
     if(amountOfData > 1) {
       uint32_t finalAddr = 0;
       for(int i = 1; i < dataPos; i++) {
@@ -989,29 +823,28 @@ funcptr nb_sendData() {
 
       changeSendAddress(finalAddr);
     }
-    return (funcptr)fsm_sleep;
   }
-
-  DEBUG("Save in eeprom.\r\n");
-  writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
-  writeString(DEBUG_USART, "\r\n");
-  parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
-  changeSaveAddress(eepromFlag.nextSaveAddress + payloadLen);
-  writeString(DEBUG_USART, "Next store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
-  writeString(DEBUG_USART, "\r\n");
+  else { // unknow error
+    DEBUG("Save in eeprom.\r\n");
+    writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
+    writeString(DEBUG_USART, "\r\n");
+    parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
+    changeSaveAddress(eepromFlag.nextSaveAddress + payloadLen);
+    writeString(DEBUG_USART, "Next store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
+    writeString(DEBUG_USART, "\r\n");
+  }
 
   return (funcptr)fsm_sleep;
 }
 
 funcptr nb_getResponse() 
 {
-  // DEBUG("nb_getResponse\r\n");
-
   char msg[800 + 1] = {0};
   int len = 0;
   lpuart1DataLength = 0;
 
   /* Check http status is 200 */
+  /* 讀取一部份, 判斷是否為200 */
   writeString(DEBUG_USART, "(UART) AT+URDBLOCK=\"rp1\",0,40\r\n");
   writeString(LPUART1, "AT+URDBLOCK=\"rp1\",0,40\r\n");
   vTaskDelay(pdMS_TO_TICKS(100));
@@ -1025,6 +858,9 @@ funcptr nb_getResponse()
   char *partMsg  = strstr(inputStringLpuart1.string, "200");
   if(partMsg == NULL) { // Not 200 or 422
     DEBUG("Result : FAIL!\r\n");
+    nbiotGetIPFlag = false;
+    getErrorFlag = true;
+
     writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
     writeString(DEBUG_USART, "\r\n");
     parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
@@ -1143,6 +979,158 @@ funcptr nb_getResponse()
   return (funcptr)fsm_sleep;
 }
 
+funcptr catM_getResponse() {
+  char msg[800 + 1] = {0};
+  int len = 0;
+
+  /* 這裡需要出分出200、422和其他 */
+  /* If http status is 422 */
+  if(exs62_getResponse(3, "HTTP/1.1 422")) {
+    DEBUG("Result : FAIL!State 422.\r\n");
+    
+    /* 關閉連線 */
+    sendCmd("AT^SISC=6\r\n");
+    if(!exs62_getResponse(3, "OK"))
+    {
+      DEBUG("Close connection fail!\r\n");
+    }
+    else
+      DEBUG("Close connection OK\r\n");
+
+    return (funcptr)fsm_sleep;
+  }
+
+  /* If http state is 200 or other */
+  char *part = strstr(inputStringLpuart1.string, "^SISR: 6,1");
+  if(part == NULL) { /* Not 200 */
+    DEBUG("Result : Fail!\r\n");
+
+    DEBUG("*-*-*-*-*-*-*-*-*-*-*\r\n");
+    DEBUG(inputStringLpuart1.string);
+    DEBUG("\r\n*-*-*-*-*-*-*-*-*-*-*\r\n");
+
+    /* 關閉連線 */
+    sendCmd("AT^SISC=6\r\n");
+    if(!exs62_getResponse(3, "OK"))
+    {
+      DEBUG("Close connection fail!\r\n");
+    }
+    else
+    {
+      DEBUG("Close connection OK\r\n");
+    }
+
+    //儲存最新一筆資料
+    DEBUG("Save in eeprom.\r\n");
+    writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
+    writeString(DEBUG_USART, "\r\n");
+    parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
+    changeSaveAddress(eepromFlag.nextSaveAddress + payloadLen);
+    writeString(DEBUG_USART, "Next store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
+    writeString(DEBUG_USART, "\r\n");
+
+    return (funcptr)fsm_sleep;
+  }
+
+  /* State 200 */
+  DEBUG("Result :OK!\r\n");
+
+  /* 刪除EEPROM裡的資料 */
+  if(amountOfData > 1) {
+    uint32_t finalAddr = 0;
+    for(int i = 1; i < dataPos; i++) {
+      uint32_t addr = eepromFlag.nextSendAddress + (i - 1) * payloadLen;
+      if(addr >= MAX_EEPROM_SIZE) addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
+      parSave(nonData, addr, payloadLen);
+      writeString(DEBUG_USART, "Delete data at : ");writeUint32(DEBUG_USART, addr);writeString(DEBUG_USART, "\r\n");
+      finalAddr = addr + payloadLen;
+    }
+
+    changeSendAddress(finalAddr);
+  }
+
+  sendCmd("AT^SISR=6,1500\r\n");
+  exs62_getResponse(3, "\"ack\"");
+
+  DEBUG("=================\r\n");
+  DEBUG(inputStringLpuart1.string);
+  DEBUG("\r\n=================\r\n");
+
+  /* Get resendTime and rtc time */
+  part = strstr(inputStringLpuart1.string, "\"ack\":");
+  uint32_t startPos = part - inputStringLpuart1.string;
+  char resendTime[10] = {0};
+  char timestemp[15] = {0};
+
+  int i = 0;
+  while((inputStringLpuart1.string[startPos + 7 + i] != '|') && i < 10)
+  {
+    resendTime[i] = inputStringLpuart1.string[startPos + 7 + i];
+    i++;
+  }
+  /* Now pos is '|' */
+  memcpy(timestemp, inputStringLpuart1.string + startPos + 7 + i + 1, 12);
+  DEBUG("New ResendTime :");DEBUG(resendTime);DEBUG(", time :");DEBUG(timestemp);DEBUG("\r\n");
+
+  /* Resend time */
+  uint32_t getResendTime = (uint32_t)strtol(resendTime, NULL, 10);
+  if(getResendTime != pResendTime && getResendTime > 60) {
+    DEBUG("Change RT from ");DEBUG_uint(pResendTime);
+    DEBUG(" to ");DEBUG_uint(getResendTime);DEBUG("\r\n");
+    nodeManager_changeResendTime((uint64_t)getResendTime);
+    DEBUG("Now RT = ");DEBUG_uint(pResendTime);DEBUG("\r\n");
+  }
+
+  /* Gateway time */
+  char YY[3], MM[3], DD[3], hh[3], mm[3], ss[3];
+  if(timestemp != NULL) {
+    memcpy(YY, timestemp, 2);
+    memcpy(MM, timestemp+2, 2);
+    memcpy(DD, timestemp+4, 2);
+    memcpy(hh, timestemp+6, 2);
+    memcpy(mm, timestemp+8, 2);
+    memcpy(ss, timestemp+10, 2);
+
+    uint32_t result = 0;
+    uint32_t year = ((uint32_t)YY[0] - 0x30) * 10 + (uint32_t)YY[1] - 0x30;
+    uint32_t month = ((uint32_t)MM[0] - 0x30) * 10 + (uint32_t)MM[1] - 0x30;
+    if(month > 12 || month <= 0) result = 1;
+    uint32_t day = ((uint32_t)DD[0] - 0x30) * 10 + (uint32_t)DD[1] - 0x30;
+    if(day > 31 || day <= 0) result = 2;
+    if(month == 2 && day > 29) result = 2;
+
+    uint32_t hour = ((uint32_t)hh[0] - 0x30) * 10 + (uint32_t)hh[1] - 0x30;
+    if(hour > 24 || hour < 0) result = 3;
+    uint32_t minute = ((uint32_t)mm[0] - 0x30) * 10 + (uint32_t)mm[1] - 0x30;
+    if(minute >= 60 || minute < 0) result = 4;
+    uint32_t second = ((uint32_t)ss[0] - 0x30) * 10 + (uint32_t)ss[1] - 0x30;
+    if(second >= 60 || second < 0) result = 5;
+
+    if(result == 0) {
+      rtc.setTime(hour, minute, second);
+      rtc.setDate(year, month, day);
+      DEBUG("Fix rtc time ok.\r\n");
+    }
+  }
+
+  /* 關閉連線 */
+  sendCmd("AT^SISC=6\r\n");
+  if(!exs62_getResponse(3, "OK"))
+  {
+    DEBUG("Close connection fail!\r\n");
+
+    sendCmd("AT^SISC=6\r\n");
+    if(!exs62_getResponse(3, "OK"))
+      DEBUG("Close connection fail again!\r\n");
+  }
+  else
+  {
+    DEBUG("Clsoe connection OK\r\n");
+  }
+
+  return (funcptr)fsm_sleep;
+}
+
 funcptr catM_Connect_And_Send() {
   char tempArray[12000] = {0};
   int newPayloadLen = sprintf(tempArray, "{\"num\":%lu,\"records\":[%s]}",
@@ -1233,37 +1221,39 @@ funcptr fsm_sleep() {
   writeString(DEBUG_USART, ">>fsm_sleep<<\r\n");
   dog.reload();
 
-  /* Close NBIOT */
-  char msg[100] = {0};
-  writeString(LPUART1, "AT+CPWROFF\r\n");
+  if(!isCatM) {
+    /* Close NBIOT */
+    char msg[100] = {0};
+    writeString(LPUART1, "AT+CPWROFF\r\n");
 
-  uint32_t start = HAL_GetTick();
-  uint32_t current = HAL_GetTick();
-  uint32_t timeout = 1000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
-    current = HAL_GetTick();
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1)
+    uint32_t start = HAL_GetTick();
+    uint32_t current = HAL_GetTick();
+    uint32_t timeout = 1000;
+    while ((current - start) < timeout)
     {
-      inputStringLpuart1.ready = 0;
-      strcat(msg, inputStringLpuart1.string);
+      dog.reload();
+      current = HAL_GetTick();
+      receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
+      if (inputStringLpuart1.ready == 1)
+      {
+        inputStringLpuart1.ready = 0;
+        strcat(msg, inputStringLpuart1.string);
+      }
     }
-  }
 
-  start = HAL_GetTick();
-  current = HAL_GetTick();
-  timeout = 10000;
-  while ((current - start) < timeout)
-  {
-    dog.reload();
+    start = HAL_GetTick();
     current = HAL_GetTick();
-    if (LL_GPIO_IsInputPinSet(pNBIOT_VINT, ioNBIOT_VINT) == 0)
+    timeout = 10000;
+    while ((current - start) < timeout)
     {
-      DEBUG("V-INT is low, close power.\r\n");
-      NBIOT_PowerOff();
-      break;
+      dog.reload();
+      current = HAL_GetTick();
+      if (LL_GPIO_IsInputPinSet(pNBIOT_VINT, ioNBIOT_VINT) == 0)
+      {
+        DEBUG("V-INT is low, close power.\r\n");
+        NBIOT_PowerOff();
+        break;
+      }
     }
   }
 
@@ -1329,32 +1319,6 @@ static void getRS485Data(char * deviceData, int receiveDataLen){
     inputStringUsart3.ready = 0;
     binaryToString(inputStringUsart3.string, receiveDataLen, deviceData);
   }
-}
-
-static int nbiot_getResponse(int sec, char* target)
-{
-    uint32_t start = HAL_GetTick();
-    uint32_t current = HAL_GetTick();
-    uint32_t timeout = sec * 1000;
-
-    while ((current - start) < timeout)
-    {
-        dog.reload();
-        current = HAL_GetTick();
-        receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-        if (inputStringLpuart1.ready == 1)
-        {
-            inputStringLpuart1.ready = 0;
-            char *part = strstr(inputStringLpuart1.string, target);
-            if(part != NULL)
-            {
-                return 1; //OK
-            }
-        }
-    }
-    
-    /* Fail */
-    return 0;
 }
 
 //-----------------------------------------------------------------

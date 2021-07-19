@@ -72,7 +72,6 @@ int sara_setHttp()
   writeString(LPUART1, "AT+UHTTP=0,9,\"1:Accept:application/json\"\r\n");
   if(!sara_getResponse(2, "OK")) return 0;
 
-
   return 1;
 }
 
@@ -81,7 +80,7 @@ int sara_writeInFileSystem(char * payload, uint32_t len)
   /* Delete data and rp in file system */
   writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"data1\"\r\n");
   writeString(LPUART1, "AT+UDELFILE=\"data1\"\r\n");
-  sara_getResponse(1, NULL);
+  sara_getResponse(1, "OK");
   
   /* Write data into file system */
   writeString(DEBUG_USART, "(UART) AT+UDWNFILE=\"data1\",");
@@ -92,14 +91,16 @@ int sara_writeInFileSystem(char * payload, uint32_t len)
   writeUint32(LPUART1, len);
   writeString(LPUART1, "\r\n");
 
-  sara_getResponse(1, NULL);
+  sara_getResponse(1, "OK");
 
   HAL_Delay(1500);
   watchdog.reload();
   writeString(LPUART1, payload);  
   writeString(LPUART1, "\r\n");  
 
-  sara_getResponse(1, NULL);
+  sara_getResponse(1, "OK");
+
+  return 1;
 }
 
 // void sendCmd(char * str)
@@ -136,3 +137,31 @@ int sara_getResponse(int sec, char* target)
     /* Fail */
     return 0;
 }
+
+int sara_http_send() {
+    writeString(LPUART1, "AT+UHTTPC=0,4,");
+    writeString(LPUART1, connectPath);
+    writeString(LPUART1, ",\"rp1\",\"data1\",4\r\n");
+
+    char msg[1000] = {0};
+    uint32_t start = HAL_GetTick();
+    uint32_t current = HAL_GetTick();
+    uint32_t timeout = 3000;
+    while ((current - start) < timeout)
+    {
+        watchdog.reload();
+        current = HAL_GetTick();
+        receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
+        if (inputStringLpuart1.ready == 1)
+        {
+            inputStringLpuart1.ready = 0;
+            strcat(msg, inputStringLpuart1.string);
+        }
+    }
+
+    char *str      = strstr(msg, "OK");
+    char *errorMsg = strstr(msg, "422 Unprocessable");
+    if     (str      != NULL) return 0; // OK
+    else if(errorMsg != NULL) return 1; // 422
+    else                      return 2; // Other error
+} 

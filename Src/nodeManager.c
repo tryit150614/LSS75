@@ -85,8 +85,8 @@ void nodeManager_modifyHash(char * newHash) {
   memset(tempHashStruct.hash, 0, 8);
   memcpy(tempHashStruct.hash, newHash, 8);
 
-  memset(pHash, 0, 8);
-  memcpy(pHash, newHash, 8);
+  // memset(pHash, 0, 8);
+  // memcpy(pHash, newHash, 8);
   /* pHash is changed on cli.cpp */
 
   memset(flashAccessBuffer, 0, sizeof(flashAccessBuffer));

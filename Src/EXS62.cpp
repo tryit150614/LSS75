@@ -29,16 +29,8 @@ namespace EXS62_ACK{
 
 int exs62_ready()
 {
-    // /* Enable EXS62's power */
-    // NBIOT_PowerOff();
-    // // M1_PowerOn();
-    // HAL_Delay(1000);
-    // memset(dmaLpuart1Buffer, 0, sizeof(dmaLpuart1Buffer));
-    // memset(lpuart1Data, 0, sizeof(lpuart1Data));
-    // ringBuffer_resetBuffer(&lpuart1Buf);
-
     /* Wait module ready */
-    if(!exs62_getResponse(2, EXS62_ACK::bootupStr)) return 0;
+    if(!exs62_getResponse(1, EXS62_ACK::bootupStr)) return 0;
 
     return 1;
 }
@@ -63,10 +55,31 @@ int exs62_setHttp()
     sendCmd("AT^SISS=6,\"hcProp\",\"Content-Type: application/json\\0d\\0aAccept: application/json\"\r\n");
     if(!exs62_getResponse(5, "OK")) return 0;
 
+    return 1;
+}
+
+int exs62_connectNetwork() {
+  /* 設定電信商的APN, 才可連網 */
+    sendCmd("AT+CGDCONT=1,\"IPV4V6\",\"internet.iot\"\r\n");
+    HAL_Delay(300);
+
+    sendCmd("AT+CGDCONT=2,\"IPV4V6\",\"nbiot\"\r\n");
+    HAL_Delay(300);
+
+    /* 設定掃頻(NBIOT掃BAND 8 28, CatM掃BAND 3)*/
+    sendCmd("AT^SCFG?\r\n");
+    HAL_Delay(300);
+
+    sendCmd("AT^SCFG=\"Radio/Band/CatNB\",\"8000080\",\"0\"\r\n");
+    HAL_Delay(300);
+
+    sendCmd("AT^SCFG=\"Radio/Band/CatM\",\"4\",\"0\"\r\n");
+    HAL_Delay(300);
+
     /* 確認是否已註冊網路 */
     uint32_t start = HAL_GetTick();
     uint32_t current = HAL_GetTick();
-    const uint32_t timeout = 120000;
+    const uint32_t timeout = 60000;
     while ((current - start) < timeout)
     {   
       watchdog.reload();
@@ -132,31 +145,64 @@ int exs62_getResponse(int sec, char* target)
     return 0;
 }
 
-int exs62_getResponse_safety(int sec, char* target)
-{
-    uint32_t start = HAL_GetTick();
-    uint32_t current = HAL_GetTick();
-    uint32_t timeout = sec * 1000;
-    char msg[1000] = {0};
-
-    while ((current - start) < timeout)
-    {
-        watchdog.reload();
-        current = HAL_GetTick();
-        receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-        if (inputStringLpuart1.ready == 1)
-        {
-            inputStringLpuart1.ready = 0;
-            strcat(msg, inputStringLpuart1.string);
-        }
-    }
-
-    char *part = strstr(msg, target);
-    if(part != NULL)
-    {
-        return 1; //OK
-    }
-
-    /* Fail */
+int exs62_preparePayload_Connect(uint32_t len) {
+  // 設定資料長度
+  char cmd[100] = {0};
+  sprintf(cmd, "AT^SISS=6,\"hcContLen\",\"%lu\"\r\n", len);
+  sendCmd(cmd);
+  if(!exs62_getResponse(2, "OK")) {
     return 0;
+  }
+
+  // 開啟連線 + 寫資料 + 傳送
+  sendCmd("AT^SISO=6\r\n");
+  if(!exs62_getResponse(5, "^SISW: 6,1")) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int exs62_closeConnetion() {
+  sendCmd("AT^SISC=6\r\n");
+  if(!exs62_getResponse(2, "OK")) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int exs62_http_send(char *payload, uint32_t payloadlen) {
+  char cmd[100] = {0};
+  if(payloadlen <= 1500)
+  {
+    sprintf(cmd, "AT^SISW=6,%lu\r\n", payloadlen);
+    sendCmd(cmd);
+    HAL_Delay(50);
+    sendCmd(payload);
+  }
+  else
+  {
+    char * pData = payload;
+    uint8_t count = payloadlen / 1500;
+    uint32_t len = payloadlen;
+    for(int i = 0; i < count; i++)
+    {
+      sendCmd("AT^SISW=6,1500\r\n");
+      HAL_Delay(50);
+      writeData(LPUART1, pData, 1500);
+      pData += 1500;
+      len -= 1500;
+
+      if(exs62_getResponse(3, "SISW: 6,1")) continue;
+      else                                  return 0;
+    }
+
+    sprintf(cmd, "AT^SISW=6,%lu\r\n", len);
+    sendCmd(cmd);
+    HAL_Delay(50);
+    writeData(LPUART1, pData, len);
+  }
+
+  return 1;
 }

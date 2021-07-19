@@ -71,7 +71,7 @@ volatile ringBufferStruct usart3Buf;
 volatile uint32_t pResendTime = 0;
 volatile uint32_t pMAC = 0;
 char pHash[9] = {0};
-char pHttpAddr[100] = {0};
+char pHttpAddr[100] = "http://yummy.agriweather.online/api/6th-nbiot";
 
 /* LED flag */
 volatile bool rs485Flag    = false;
@@ -129,7 +129,6 @@ int main(void)
   MX_I2C4_Init();
 
   rtc.init();
-
   if(DWT_Delay_Init()) DEBUG("DWT init FAIL!\r\n");
   else                 DEBUG("DWT init OK\r\n");
 

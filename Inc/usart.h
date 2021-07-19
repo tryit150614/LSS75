@@ -40,6 +40,7 @@ int write16Byte(USART_TypeDef * usart, const uint32_t n);
 int binaryToString(const char * s, int dataLen, char * payloadOut);
 
 void DEBUG(const char * s );
+int DEBUG_uint(const uint32_t n);
 /* USER CODE END Private defines */
 
 void MX_LPUART1_UART_Init(void);

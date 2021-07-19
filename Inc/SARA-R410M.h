@@ -8,6 +8,7 @@ int sara_writeInFileSystem(char * payload, uint32_t len);
 int sara_setHttp();
 int sara_getResponse(int sec, char* target);
 int sara_getResponse_safety(int sec, char* target);
+int sara_http_send();
 
 // void sendCmd(char * str);
 

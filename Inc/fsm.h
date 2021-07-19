@@ -47,5 +47,6 @@ funcptr nb_sendData();
 
 funcptr fsm_checkModule();
 funcptr catM_Connect_And_Send();
+funcptr catM_getResponse();
 
 #endif /* FSM_H_ */

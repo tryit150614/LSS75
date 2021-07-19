@@ -368,6 +368,19 @@ void DEBUG(const char * s ) {
   writeString(DEBUG_USART, s);
 }
 
+int DEBUG_uint(const uint32_t n) {
+  uint32_t i = 0;
+  const uint32_t len = sizeof(n);
+  char tempStr[len+1];
+  sprintf(tempStr, "%lu", n);
+  do {
+    sendChar(DEBUG_USART, tempStr[i]);
+    i++;
+  }while(tempStr[i] !=  0);
+
+  return i;
+}
+
 int writeInt(USART_TypeDef * usart, const int n) {
 
   int i = 0;
