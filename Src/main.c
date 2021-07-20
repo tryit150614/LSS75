@@ -185,7 +185,7 @@ int main(void)
   writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.3.0 2021/07/09\r\n");
+  DEBUG("Version 1.4.0 2021/07/20\r\n");
 
   ringBuffer_new(&lpuart1Buf, lpuart1Data, lpuart1DataSize);
   ringBuffer_resetBuffer(&lpuart1Buf);

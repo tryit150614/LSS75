@@ -71,6 +71,11 @@ int sara_setHttp()
   writeString(DEBUG_USART, "(UART) AT+UHTTP=0,9,\"1:Accept:application/json\"\r\n");
   writeString(LPUART1, "AT+UHTTP=0,9,\"1:Accept:application/json\"\r\n");
   if(!sara_getResponse(2, "OK")) return 0;
+  
+  /* 只掃Band 8, Band 28 */
+  writeString(DEBUG_USART, "(UART) AT+UBANDMASK=1,134217856,0\r\n");
+  writeString(LPUART1, "AT+UBANDMASK=1,134217856,0\r\n");
+  if(!sara_getResponse(2, "OK")) return 0;
 
   return 1;
 }
