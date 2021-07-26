@@ -1309,7 +1309,7 @@ static void transmitRS485(uint8_t * deviceNumber){
 
   //turn to receive status
   RS485_Receive();
-  HAL_Delay(500);
+  HAL_Delay(250);
 }
 
 static void getRS485Data(char * deviceData, int receiveDataLen){

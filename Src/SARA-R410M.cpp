@@ -82,6 +82,10 @@ int sara_setHttp()
 
 int sara_writeInFileSystem(char * payload, uint32_t len)
 {
+  writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"rp1\"\r\n");
+  writeString(LPUART1, "AT+UDELFILE=\"rp1\"\r\n");
+  sara_getResponse(2, "OK");
+
   /* Delete data and rp in file system */
   writeString(DEBUG_USART, "(UART) AT+UDELFILE=\"data1\"\r\n");
   writeString(LPUART1, "AT+UDELFILE=\"data1\"\r\n");
