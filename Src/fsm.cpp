@@ -621,7 +621,7 @@ funcptr nb_waitIP() {
     writeString(DEBUG_USART, "(UART) AT+CGDCONT?\r\n");
     writeString(LPUART1, "AT+CGDCONT?\r\n");
 
-    if(sara_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\""))
+    if(sara_getResponse(2, "+CGDCONT: 1,\"IPV4V6\",\"\",\"") || strnlen(inputStringLpuart1.string, 35) <= 10)
     { /* 尚未註冊 */
       waitIPCount++;
       vTaskDelay(pdMS_TO_TICKS(1000));
