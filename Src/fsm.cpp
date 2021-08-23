@@ -648,6 +648,13 @@ funcptr nb_waitIP() {
 funcptr nb_getSignalPower() {
   char msg[100] = {0};
   memset(signalPower, 0, sizeof(signalPower));
+
+  if(noConnectFlag) {
+    memcpy(signalPower, "0", 1);
+    DEBUG("Module no network, rssi = 0\r\n");
+    return (funcptr)nb_writeNewDataInBuffer;
+  }
+
   /* Get power */
   if(!isCatM) { // Ublox
     HAL_Delay(50);
@@ -996,6 +1003,20 @@ funcptr catM_getResponse() {
     }
     else
       DEBUG("Close connection OK\r\n");
+
+    /* 刪除EEPROM裡的資料 */
+    if(amountOfData > 1) {
+      uint32_t finalAddr = 0;
+      for(int i = 1; i < dataPos; i++) {
+        uint32_t addr = eepromFlag.nextSendAddress + (i - 1) * payloadLen;
+        if(addr >= MAX_EEPROM_SIZE) addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
+        parSave(nonData, addr, payloadLen);
+        writeString(DEBUG_USART, "Delete data at : ");writeUint32(DEBUG_USART, addr);writeString(DEBUG_USART, "\r\n");
+        finalAddr = addr + payloadLen;
+      }
+
+      changeSendAddress(finalAddr);
+    }
 
     return (funcptr)fsm_sleep;
   }
