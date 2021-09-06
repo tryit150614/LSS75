@@ -479,7 +479,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempStr, rawData_Waterdepth + 6, 4);
     tempWD = (uint32_t)strtol(tempStr, NULL, 16);
-    sprintf(waterDepth, "%lu.%01lu", tempWD / 10, tempWD % 10);
+    sprintf(waterDepth, "%lu", tempWD);
   }
 
   /* Sun Radiation */
@@ -1311,26 +1311,26 @@ static void transmitRS485(uint8_t * deviceNumber){
   HAL_Delay(10);
 
   LL_USART_TransmitData8(USART3,deviceNumber[0]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[1]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[2]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[3]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[4]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[5]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[6]);
-  DWT_Delay_us(1042);
+  DEBUG("1");
   LL_USART_TransmitData8(USART3,deviceNumber[7]);
-  DWT_Delay_us(1042);
-  DWT_Delay_us(1042);
+  DEBUG("1");
+  DEBUG("1");
 
   //turn to receive status
   RS485_Receive();
-  HAL_Delay(250);
+  HAL_Delay(500);
 }
 
 static void getRS485Data(char * deviceData, int receiveDataLen){
