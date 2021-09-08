@@ -43,9 +43,16 @@ uint32_t flashWriteBlock_with_erase(uint64_t * src, uint32_t destAddr, unsigned 
   HAL_StatusTypeDef ret = flashErasePages(FLASH_TYPEERASE_PAGES, start_page, end_page);
   if (ret != HAL_OK) {
     writeString(DEBUG_USART, "Flash erase fail.\r\n");
-    HAL_Delay(5);
-    ret = flashErasePages(FLASH_TYPEERASE_PAGES, start_page, end_page);
-    if (ret != HAL_OK) writeString(DEBUG_USART, "Flash erase fail again.\r\n");
+    // HAL_Delay(5);
+    // ret = flashErasePages(FLASH_TYPEERASE_PAGES, start_page, end_page);
+    // if (ret != HAL_OK) writeString(DEBUG_USART, "Flash erase fail again.\r\n");
+    int count = 0;
+    while(ret != HAL_OK && count <= 4) {
+      HAL_Delay(5);
+      ret = flashErasePages(FLASH_TYPEERASE_PAGES, start_page, end_page);
+      if (ret != HAL_OK) writeString(DEBUG_USART, "Flash erase fail again.\r\n");
+      count++;
+    }
   }
 
   unsigned int loopIter = numbBytes / 8;

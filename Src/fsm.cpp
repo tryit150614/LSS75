@@ -1280,6 +1280,8 @@ funcptr fsm_sleep() {
 
   // writeString(DEBUG_USART, "Sleep time : ");writeUint32(DEBUG_USART, 600);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "Sleep time : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
+  DEBUG("RTC : ");DEBUG_uint(rtc.getYear());DEBUG_uint(rtc.getMonth());DEBUG_uint(rtc.getDay());
+  DEBUG("_");     DEBUG_uint(rtc.getHour());DEBUG_uint(rtc.getMinute());DEBUG_uint(rtc.getSecond());DEBUG("\r\n");
 
   HAL_PWREx_EnterSHUTDOWNMode();
   return 0;

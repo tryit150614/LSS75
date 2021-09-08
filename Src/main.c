@@ -30,8 +30,8 @@ SD card version
 #include "delay.h"
 
 struct ResendStruct flashResend = {(uint64_t)1200};
-struct MACStruct flashMAC = {13};
-struct HashStruct flashHASH = {"FDxjme5e"};
+struct MACStruct flashMAC = {9};
+struct HashStruct flashHASH = {"FDlpdx5y"};
 struct FlashFlagStruct flashFlag = {1};
 
 extern uint16_t adc1DmaBuffer[DMA1_ADC_BUFFER_SIZE];
@@ -129,8 +129,8 @@ int main(void)
   MX_I2C4_Init();
 
   rtc.init();
-  if(DWT_Delay_Init()) DEBUG("DWT init FAIL!\r\n");
-  else                 DEBUG("DWT init OK\r\n");
+  // if(DWT_Delay_Init()) DEBUG("DWT init FAIL!\r\n");
+  // else                 DEBUG("DWT init OK\r\n");
 
   /* Setting rtc alert */
   if(pResendTime == 0 || pResendTime > 86400)
@@ -151,41 +151,6 @@ int main(void)
   NVIC_SetPriority(RTC_WKUP_IRQn, 2);
   LL_PWR_DisableBkUpAccess();
   /***********************/
-
-  if(flashRead(FLASH_FLAG_START_ADDR) != 0)
-  {
-    writeString(DEBUG_USART, "----------- init -----------\r\n");
-    Lora_Send_Toggle();
-    Lora_Receive_Toggle();
-    powerLED_Toggle();
-
-    clearAllDataInEEPROM();
-    Lora_Send_Toggle();
-    Lora_Receive_Toggle();
-    powerLED_Toggle();
-    changeSaveAddress(dataFirstAddress);
-    changeSendAddress(dataFirstAddress);
-    HAL_Delay(10);
-    nodeManager_riseInitFlag();
-  }
-  uint8_t temp[8+1] = {0};
-  bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)8);
-  if(loadResult) {
-    eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
-    eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
-    writeString(DEBUG_USART, "Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);writeString(DEBUG_USART, "\r\n");
-    writeString(DEBUG_USART, "Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);writeString(DEBUG_USART, "\r\n");
-  }
-  else {
-    writeString(DEBUG_USART, "Load saveADdress & sendAddress FAIL!\r\n");
-  }
-
-  writeString(DEBUG_USART, "Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "MAC : ");writeUint32(DEBUG_USART, pMAC);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.3.5 2021/09/06\r\n");
 
   ringBuffer_new(&lpuart1Buf, lpuart1Data, lpuart1DataSize);
   ringBuffer_resetBuffer(&lpuart1Buf);
@@ -235,6 +200,46 @@ int main(void)
     while (1);
   }
 
+  DEBUG("RTC : ");DEBUG_uint(rtc.getYear());DEBUG_uint(rtc.getMonth());DEBUG_uint(rtc.getDay());
+  DEBUG("_");     DEBUG_uint(rtc.getHour());DEBUG_uint(rtc.getMinute());DEBUG_uint(rtc.getSecond());DEBUG("\r\n");
+  // if(flashRead(FLASH_FLAG_START_ADDR) != 0) {
+  //   nodeManager_riseInitFlag();
+  //   writeString(DEBUG_USART, "Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));writeString(DEBUG_USART, "\r\n");
+  // }
+  if(flashRead(FLASH_FLAG_START_ADDR) != 0)
+  {
+    writeString(DEBUG_USART, "----------- init -----------\r\n");
+    Lora_Send_Toggle();
+    Lora_Receive_Toggle();
+    powerLED_Toggle();
+
+    clearAllDataInEEPROM();
+    Lora_Send_Toggle();
+    Lora_Receive_Toggle();
+    powerLED_Toggle();
+    changeSaveAddress(dataFirstAddress);
+    changeSendAddress(dataFirstAddress);
+    HAL_Delay(10);
+    nodeManager_riseInitFlag();
+  }
+  uint8_t temp[8+1] = {0};
+  bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)8);
+  if(loadResult) {
+    eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
+    eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
+    writeString(DEBUG_USART, "Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);writeString(DEBUG_USART, "\r\n");
+    writeString(DEBUG_USART, "Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);writeString(DEBUG_USART, "\r\n");
+  }
+  else {
+    writeString(DEBUG_USART, "Load saveADdress & sendAddress FAIL!\r\n");
+  }
+
+  writeString(DEBUG_USART, "Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));writeString(DEBUG_USART, "\r\n");
+  writeString(DEBUG_USART, "MAC : ");writeUint32(DEBUG_USART, pMAC);writeString(DEBUG_USART, "\r\n");
+  writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
+  writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
+  writeString(DEBUG_USART, "-----------------------------------\r\n");
+  DEBUG("Version 1.3.6 2021/09/08\r\n");
   DEBUG("READY\r\n");
 
   /* Start scheduler */
