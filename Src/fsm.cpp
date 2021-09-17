@@ -737,6 +737,9 @@ funcptr nb_writeNewDataInBuffer() {
   
   strcat(readySendData, newData);
   amountOfData = 1;
+  DEBUG("******** Payload ********\r\n");
+  DEBUG(newData);
+  DEBUG("\r\n******** ******* ********\r\n");
 
   if(noConnectFlag) {
     DEBUG("Save in eeprom.\r\n");

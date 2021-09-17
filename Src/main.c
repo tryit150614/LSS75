@@ -239,7 +239,7 @@ int main(void)
   writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.3.6 2021/09/08\r\n");
+  DEBUG("Version 1.3.7 2021/09/17\r\n");
   DEBUG("READY\r\n");
 
   /* Start scheduler */
