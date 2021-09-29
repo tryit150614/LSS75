@@ -75,11 +75,8 @@ char pHttpAddr[100] = "http://yummy.agriweather.online/api/6th-nbiot";
 
 /* LED flag */
 volatile bool rs485Flag    = false;
-volatile bool getDataFlag  = false;
-volatile bool nbiotFindIPFlag   = false;
-volatile bool nbiotGetIPFlag    = false;
-volatile bool getOKFlag     = false;
-volatile bool getErrorFlag  = false;
+volatile bool moduleFlag   = false;
+volatile bool sendOKFlag   = false;
 /*----------*/
 
 I2C_HandleTypeDef hi2c4;
@@ -239,7 +236,7 @@ int main(void)
   writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
   writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.3.7 2021/09/17\r\n");
+  DEBUG("Version 1.3.8 2021/09/29\r\n");
   DEBUG("READY\r\n");
 
   /* Start scheduler */
@@ -375,51 +372,25 @@ void TaskCLI(void *pvParameters) {
   }
 }
 
+/*
+rs485Flag  : 有資料才亮Receive燈, 亮0.2秒
+moduleFlag : 有^SYSSTART才亮Send燈(CatM only), 亮0.2秒
+sendOKFlag : 亮Receive and Send燈, 亮1秒 
+*/
 void TaskLED(void *pvParameters) {
   for(;;) {
-    if(rs485Flag) {
-      LL_GPIO_SetOutputPin( pPowerLED, ioPowerLED);
-      LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
-      LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-      vTaskDelay(pdMS_TO_TICKS(5));
-      LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
-      LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
-      LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
-      vTaskDelay(pdMS_TO_TICKS(995));
-    }
-    else if(getDataFlag) {
-      LL_GPIO_SetOutputPin( pPowerLED, ioPowerLED);
-      vTaskDelay(pdMS_TO_TICKS(5));
-      LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
-      vTaskDelay(pdMS_TO_TICKS(995));
-    }
-    else if(nbiotFindIPFlag) {
-      LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-      vTaskDelay(pdMS_TO_TICKS(10));
-      LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
-      vTaskDelay(pdMS_TO_TICKS(990));
-    }
-    else if(nbiotGetIPFlag) {
-      LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
-      vTaskDelay(pdMS_TO_TICKS(10));
-      LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
-      vTaskDelay(pdMS_TO_TICKS(990));
-    }
-    else if(getOKFlag) {
-      LL_GPIO_SetOutputPin( pPowerLED, ioPowerLED);
-      LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
-      LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-      vTaskDelay(pdMS_TO_TICKS(100));
-      LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
-      LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
-      LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
-      vTaskDelay(pdMS_TO_TICKS(900));
-    }
-    else if(getErrorFlag) {
-      LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-    }
+    LL_GPIO_SetOutputPin(pPowerLED, ioPowerLED);
+    if(rs485Flag || sendOKFlag)   LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
+    if(moduleFlag)  LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
 
-    vTaskDelay(pdMS_TO_TICKS(10));
+    if(sendOKFlag)  {vTaskDelay(pdMS_TO_TICKS(1000)); sendOKFlag = false;}
+    else            vTaskDelay(pdMS_TO_TICKS(10));
+
+    LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
+    LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
+    LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
+
+    vTaskDelay(pdMS_TO_TICKS(990));
   }
 }
 

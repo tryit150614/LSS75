@@ -17,6 +17,7 @@ extern uint8_t dmaLpuart1Buffer[DMA_LPUART1_BUFFER_SIZE];
 extern Watchdog watchdog;
 extern char pHttpAddr[100];
 
+extern volatile bool moduleFlag;
 volatile bool networkFlag = false;
 
 namespace EXS62_ACK{
@@ -32,6 +33,7 @@ int exs62_ready()
     /* Wait module ready */
     if(!exs62_getResponse(1, EXS62_ACK::bootupStr)) return 0;
 
+    moduleFlag = true;
     return 1;
 }
 
@@ -79,7 +81,7 @@ int exs62_connectNetwork() {
     /* 確認是否已註冊網路 */
     uint32_t start = HAL_GetTick();
     uint32_t current = HAL_GetTick();
-    const uint32_t timeout = 60000;
+    const uint32_t timeout = 120000;
     while ((current - start) < timeout)
     {   
       watchdog.reload();

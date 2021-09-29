@@ -43,11 +43,8 @@ extern volatile uint32_t pMAC;
 extern char pHash[9];
 
 extern volatile bool rs485Flag;
-extern volatile bool getDataFlag;
-extern volatile bool nbiotFindIPFlag;
-extern volatile bool nbiotGetIPFlag;
-extern volatile bool getOKFlag;
-extern volatile bool getErrorFlag;
+extern volatile bool moduleFlag;
+extern volatile bool sendOKFlag;
 bool noConnectFlag = false;
 
 extern RNG_HandleTypeDef hrng;
@@ -185,7 +182,6 @@ funcptr fsm_getADCValue()
     }
 
     tempTimestamp = getUnixTimestamp();
-    getDataFlag = false;
 
   return (funcptr)fsm_getRS485Data;
 }
@@ -218,9 +214,7 @@ funcptr fsm_getRS485Data()
   uint8_t leaf_array[8]             = {0x20,0x03,0x00,0x00,0x00,0x02,0xC2,0xBA}; 
 
   powerOnRS485Sensor();
-  rs485Flag = true;
   vTaskDelay(pdMS_TO_TICKS(10000));
-  rs485Flag = false;
   memset(usart3Buf.bufferPtr, 0, usart3DataSize);
   ringBuffer_resetBuffer(&usart3Buf);
 
@@ -261,6 +255,7 @@ funcptr fsm_getRS485Data()
     memcpy(soilEC, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Soil sensor data : ");
     writeString(DEBUG_USART, rs485Data_Soil);
     writeString(DEBUG_USART, "\r\n");
@@ -307,6 +302,7 @@ funcptr fsm_getRS485Data()
     memcpy(soilPH, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "PH sensor data : ");
     writeString(DEBUG_USART, rs485Data_PH);
     writeString(DEBUG_USART, "\r\n");
@@ -330,6 +326,7 @@ funcptr fsm_getRS485Data()
     memcpy(airH, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Air sensor data : ");
     writeString(DEBUG_USART, rs485Data_Air);
     writeString(DEBUG_USART, "\r\n");
@@ -366,6 +363,7 @@ funcptr fsm_getRS485Data()
     memcpy(windSpeed, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Wind speed sensor data : ");
     writeString(DEBUG_USART, rawData_WS);
     writeString(DEBUG_USART, "\r\n");
@@ -385,6 +383,7 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "Soil_2 senser : N/A\r\n");
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Soil_2 sensor data : ");
     writeString(DEBUG_USART, rs485Data_Soil_2);
     writeString(DEBUG_USART, "\r\n");
@@ -428,6 +427,7 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "PH_2 senser : N/A\r\n");
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "PH_2 sensor data : ");
     writeString(DEBUG_USART, rs485Data_PH_2);
     writeString(DEBUG_USART, "\r\n");
@@ -449,6 +449,7 @@ funcptr fsm_getRS485Data()
     memcpy(solra, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Solra PAR sensor data : ");
     writeString(DEBUG_USART, rawData_Solar);
     writeString(DEBUG_USART, "\r\n");
@@ -469,6 +470,7 @@ funcptr fsm_getRS485Data()
     memcpy(waterDepth, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "water depth sensor data : ");
     writeString(DEBUG_USART, rawData_Waterdepth);
     writeString(DEBUG_USART, "\r\n");
@@ -489,6 +491,7 @@ funcptr fsm_getRS485Data()
     memcpy(sunRadiation, "0", 1);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Sun Radiation sensor data : ");
     writeString(DEBUG_USART, rawData_SR);
     writeString(DEBUG_USART, "\r\n");
@@ -507,6 +510,7 @@ funcptr fsm_getRS485Data()
     writeString(DEBUG_USART, "Wind speed senser : N/A\r\n");
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Wind speed sensor 2 data : ");
     writeString(DEBUG_USART, rawData_WS_2);
     writeString(DEBUG_USART, "\r\n");
@@ -529,6 +533,7 @@ funcptr fsm_getRS485Data()
     memcpy(leafH, "0.0", 3);
   }
   else {
+    rs485Flag = true;
     writeString(DEBUG_USART, "Leaf T&H sensor data : ");
     writeString(DEBUG_USART, rawData_Leaf);
     writeString(DEBUG_USART, "\r\n");
@@ -564,6 +569,7 @@ funcptr fsm_getRS485Data()
 
 funcptr fsm_checkModule()
 {
+  static bool reInitFlag = false;
   uint32_t start = HAL_GetTick();
   uint32_t current = HAL_GetTick();
   if(exs62_ready()) {
@@ -571,17 +577,22 @@ funcptr fsm_checkModule()
     current = HAL_GetTick();
     DEBUG("Spend : ");writeUint32(DEBUG_USART, current - start);DEBUG("\r\n");
     isCatM = true;
+    moduleFlag = true;
 
     if(exs62_setHttp()) {
-      DEBUG("Setting http OK\r\n");
+      DEBUG("CatM setting OK\r\n");
     }
     else {
-      DEBUG("Setting http Fail\r\n");
-      NBIOT_PowerOff();
-      vTaskDelay(pdMS_TO_TICKS(1000));
-      NBIOT_PowerOn();
-      vTaskDelay(pdMS_TO_TICKS(10000));
-      return (funcptr)fsm_checkModule;
+      DEBUG("CatM setting Fail\r\n");
+      moduleFlag = false;
+      if(!reInitFlag) {
+        reInitFlag = true;
+        NBIOT_PowerOff();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        NBIOT_PowerOn();
+        vTaskDelay(pdMS_TO_TICKS(10000));
+        return (funcptr)fsm_checkModule;
+      }
     }
   }
   else {
@@ -589,17 +600,21 @@ funcptr fsm_checkModule()
     sara_ready();
 
     if(sara_setHttp()) {
-      DEBUG("Setting http OK\r\n");
+      DEBUG("nblox setting OK\r\n");
+      moduleFlag = true;
     }
     else {
-      DEBUG("Setting http Fail\r\n");
-      NBIOT_PowerOff();
-      vTaskDelay(pdMS_TO_TICKS(1000));
-      return (funcptr)fsm_checkModule;
+      moduleFlag = false;
+      DEBUG("nblox setting Fail\r\n");
+      if(!reInitFlag) {
+        reInitFlag = true;
+        NBIOT_PowerOff();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        return (funcptr)fsm_checkModule;
+      }
     }
   }
 
-  nbiotFindIPFlag = true;
   return (funcptr)nb_waitIP;
 }
 
@@ -635,8 +650,6 @@ funcptr nb_waitIP() {
     else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
     { /* 已經註冊 */
       DEBUG("Spend time : ");writeInt(DEBUG_USART, waitIPCount);DEBUG("\r\n");
-      nbiotFindIPFlag = false;
-      nbiotGetIPFlag = true;
       waitIPCount = 0;
       return (funcptr)nb_getSignalPower;
     }
@@ -868,8 +881,6 @@ funcptr nb_getResponse()
   char *partMsg  = strstr(inputStringLpuart1.string, "200");
   if(partMsg == NULL) { // Not 200 or 422
     DEBUG("Result : FAIL!\r\n");
-    nbiotGetIPFlag = false;
-    getErrorFlag = true;
 
     writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
     writeString(DEBUG_USART, "\r\n");
@@ -898,8 +909,8 @@ funcptr nb_getResponse()
   char *str = strstr(msg, "\"ack\":");
   if(str != NULL && len < 1000) { /* Get success response */
     DEBUG(" Get success ACK\r\n");
-    nbiotGetIPFlag = false;
-    getOKFlag = true;
+    sendOKFlag = true;
+    vTaskDelay(pdMS_TO_TICKS(1000));
     if(amountOfData > 1) {
       uint32_t finalAddr = 0;
       for(int i = 1; i < dataPos; i++) {
@@ -976,8 +987,6 @@ funcptr nb_getResponse()
   }
   else {
     DEBUG("No success response, save in eeprom.\r\n");
-    nbiotGetIPFlag = false;
-    getErrorFlag = true;
     writeString(DEBUG_USART, "This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
     writeString(DEBUG_USART, "\r\n");
     parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
@@ -1058,6 +1067,8 @@ funcptr catM_getResponse() {
 
   /* State 200 */
   DEBUG("Result :OK!\r\n");
+  sendOKFlag = true;
+  vTaskDelay(pdMS_TO_TICKS(1000));
 
   /* 刪除EEPROM裡的資料 */
   if(amountOfData > 1) {
