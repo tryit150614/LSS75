@@ -1,25 +1,3 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-
-/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __MAIN_H
 #define __MAIN_H
 
@@ -47,32 +25,8 @@ extern "C" {
 #include "stm32l4xx_ll_rtc.h"
 #include "stm32l4xx_hal_rng.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
-
-/* USER CODE END ET */
-
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
-
-/* USER CODE END EC */
-
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
-
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-
-/* USER CODE BEGIN EFP */
-
-/* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define DMA_LPUART1_BUFFER_SIZE 12000
@@ -95,7 +49,7 @@ void Error_Handler(void);
 #define pEEPROMProtect      GPIOB
 #define pNBIOTPower         GPIOB
 #define pNBIOT_PWR          GPIOB
-#define pDetectModule        GPIOB
+#define pDetectModule       GPIOB
 #define pNBIOT_VINT         GPIOB
 
 #define ioRS485Switch       LL_GPIO_PIN_11
@@ -108,7 +62,7 @@ void Error_Handler(void);
 #define ioEEPROMProtect     LL_GPIO_PIN_3
 #define ioNBIOTPower        LL_GPIO_PIN_8
 #define ioNBIOT_PWR         LL_GPIO_PIN_13
-#define ioDetectModule       LL_GPIO_PIN_14
+#define ioDetectModule      LL_GPIO_PIN_14
 #define ioNBIOT_VINT        LL_GPIO_PIN_15
 
 #define powerOnLora()             LL_GPIO_SetOutputPin(pLoraPower, ioLoraPower)
@@ -130,26 +84,7 @@ void Error_Handler(void);
 #define EEPROM_DisableProtect()   LL_GPIO_ResetOutputPin(pEEPROMProtect, ioEEPROMProtect)
 #define NBIOT_PowerOn()           LL_GPIO_SetOutputPin(pNBIOTPower, ioNBIOTPower)
 #define NBIOT_PowerOff()          LL_GPIO_ResetOutputPin(pNBIOTPower, ioNBIOTPower)
-/* USER CODE BEGIN Private defines */
-struct ResendStruct {
-  uint64_t resendTime;
-};
 
-struct MACStruct {
-  uint64_t mac;
-  uint64_t hash1;
-  uint64_t hash2;
-};
-
-struct HashStruct {
-  char hash[9];
-};
-
-struct FlashFlagStruct {
-  uint64_t initFlag;
-};
-
-uint32_t getUnixTimestamp();
 #ifdef __cplusplus
 }
 #endif

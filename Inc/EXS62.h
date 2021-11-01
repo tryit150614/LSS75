@@ -8,6 +8,7 @@ int exs62_getResponse(int sec, char* target);
 int exs62_preparePayload_Connect(uint32_t len);
 int exs62_closeConnetion();
 int exs62_http_send(char *payload, uint32_t payloadlen);
+void exs62_getRSSI(char * out);
 
 void sendCmd(char * str);
 

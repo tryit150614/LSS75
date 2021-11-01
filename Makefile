@@ -113,6 +113,8 @@ OBJS := $(OBJS:%.cpp=$(BUILD_DIR)/%.o)
 
 INCLUDES =  \
 -IInc \
+-IInc/Basic \
+-IInc/STM32 \
 -IDrivers/STM32L4xx_HAL_Driver/Inc \
 -IDrivers/STM32L4xx_HAL_Driver/Inc/Legacy \
 -IMiddlewares/Third_Party/FreeRTOS/Source/include \

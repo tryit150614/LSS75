@@ -15,7 +15,7 @@
 
 extern volatile ringBufferStruct lpuart1Buf;
 extern struct inputString inputStringLpuart1;
-extern unsigned int lpuart1DataLength;
+extern int lpuart1DataLength;
 extern uint8_t lpuart1Data[800];
 extern uint8_t dmaLpuart1Buffer[DMA_LPUART1_BUFFER_SIZE];
 
@@ -112,15 +112,6 @@ int sara_writeInFileSystem(char * payload, uint32_t len)
   return 1;
 }
 
-// void sendCmd(char * str)
-// {
-//     writeString(LPUART1, str);
-// }
-
-/*
-return 1 : OK
-       0 : Fail
-*/
 int sara_getResponse(int sec, char* target)
 {
     uint32_t start = HAL_GetTick();
@@ -173,4 +164,60 @@ int sara_http_send() {
     if     (str      != NULL) return 0; // OK
     else if(errorMsg != NULL) return 1; // 422
     else                      return 2; // Other error
-} 
+}
+
+int sara_poweroff() {
+
+    writeString(LPUART1, "AT+CPWROFF\r\n");
+
+    uint32_t start = HAL_GetTick();
+    uint32_t current = HAL_GetTick();
+    uint32_t timeout = 10000;
+    while ((current - start) < timeout)
+    {
+      watchdog.reload();
+      current = HAL_GetTick();
+      if (LL_GPIO_IsInputPinSet(pNBIOT_VINT, ioNBIOT_VINT) == 0)
+      {
+        DEBUG("V-INT is low, close power.\r\n");
+        NBIOT_PowerOff();
+        return 1;
+      }
+    }
+
+    return 0;
+}
+
+int sara_checkIP() {
+    writeString(LPUART1, "AT+CGDCONT?\r\n");
+
+    if(sara_getResponse(1, "+CGDCONT: 1,\"IPV4V6\",\"\",\"") || strnlen(inputStringLpuart1.string, 35) <= 10)
+    { /* 尚未註冊 */
+      return 0;
+    }
+    else if(memcmp(inputStringLpuart1.string, "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",", 35) == 0)
+    { /* 已經註冊 */
+      return 1;
+    }
+}
+
+void sara_getRSSI(char * out) {
+  writeString(LPUART1, "AT+CESQ\r\n");
+  if(sara_getResponse(1, "+CESQ: ")) {
+    char *str;
+    strtok(inputStringLpuart1.string, ",");
+    strtok(NULL, ",");
+    strtok(NULL, ",");
+    strtok(NULL, ",");
+    strtok(NULL, ",");
+    str = strtok(NULL, ",");
+    if(memcmp(str, "99", 2) == 0 || memcmp(str, "255", 3) == 0) {
+      out[0] = '0';
+    } else {
+      int rssiVal = strtol(str, NULL, 10) - 111;
+      sprintf(out, "%d", rssiVal);
+    }
+  } else {
+    out[0] = '0';
+  }
+}

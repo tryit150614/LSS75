@@ -29,6 +29,8 @@ bool     parLoad(uint8_t* buf, uint16_t addr, uint16_t len);
 void     changeSaveAddress(uint16_t newAddress);
 void     changeSendAddress(uint16_t newAddress);
 void     clearAllDataInEEPROM();
+int      eeprom_load_eepromFlag();
+int      eeprom_saveData_and_jumpNextPos(uint8_t * data);
 
 // uint32_t rtvData(uint8_t* dat, uint8_t pnt, uint8_t len);
 

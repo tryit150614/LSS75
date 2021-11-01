@@ -15,6 +15,7 @@
         "fsm_nbiot.h": "c",
         "st_watchdog.h": "c",
         "cstdint": "cpp",
-        "eeprom.h": "c"
+        "eeprom.h": "c",
+        "rtccontroller.h": "c"
     }
 }

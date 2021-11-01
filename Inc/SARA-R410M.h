@@ -9,6 +9,9 @@ int sara_setHttp();
 int sara_getResponse(int sec, char* target);
 int sara_getResponse_safety(int sec, char* target);
 int sara_http_send();
+int sara_poweroff();
+int sara_checkIP();
+void sara_getRSSI(char * out);
 
 // void sendCmd(char * str);
 

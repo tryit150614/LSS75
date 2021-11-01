@@ -7,18 +7,11 @@
 #include "st_watchdog.h"
 #include "usart.h"
 
-
 extern volatile ringBufferStruct lpuart1Buf;
 extern struct inputString inputStringLpuart1;
-extern unsigned int lpuart1DataLength;
-extern uint8_t lpuart1Data[800];
-extern uint8_t dmaLpuart1Buffer[DMA_LPUART1_BUFFER_SIZE];
 
 extern Watchdog watchdog;
 extern char pHttpAddr[100];
-
-extern volatile bool moduleFlag;
-volatile bool networkFlag = false;
 
 namespace EXS62_ACK{
     char bootupStr[] = "\r\n^SYSSTART";
@@ -33,7 +26,6 @@ int exs62_ready()
     /* Wait module ready */
     if(!exs62_getResponse(1, EXS62_ACK::bootupStr)) return 0;
 
-    moduleFlag = true;
     return 1;
 }
 
@@ -69,9 +61,6 @@ int exs62_connectNetwork() {
     HAL_Delay(300);
 
     /* 設定掃頻(NBIOT掃BAND 8 28, CatM掃BAND 3)*/
-    sendCmd("AT^SCFG?\r\n");
-    HAL_Delay(300);
-
     sendCmd("AT^SCFG=\"Radio/Band/CatNB\",\"8000080\",\"0\"\r\n");
     HAL_Delay(300);
 
@@ -79,6 +68,7 @@ int exs62_connectNetwork() {
     HAL_Delay(300);
 
     /* 確認是否已註冊網路 */
+    bool networkFlag = false;
     uint32_t start = HAL_GetTick();
     uint32_t current = HAL_GetTick();
     const uint32_t timeout = 120000;
@@ -207,4 +197,30 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
   }
 
   return 1;
+}
+
+void exs62_getRSSI(char * out) {
+  sendCmd("AT^SMONI\r\n");
+  HAL_Delay(50);
+  if(exs62_getResponse(1, "^SMONI:")) {
+    // RSRP於第12格
+    char *str;
+    strtok(inputStringLpuart1.string, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    strtok(nullptr, ",");
+    str = strtok(nullptr, ",");
+
+    memcpy(out, str, strnlen(str, 4));
+  } else {
+    memset(out, 0, sizeof(out));
+    out[0] = '0';
+  }
 }

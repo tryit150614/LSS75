@@ -1,12 +1,9 @@
 #include "eeprom.h"
-// #include "main.h"
 #include "usart.h"
 #include "stdio.h"
 
 extern I2C_HandleTypeDef hi2c4;
-extern EEPROMFlag eepromFlag;
-
-// bool parReadByte(uint16_t addr, uint8_t* read_buf);
+EEPROMFlag eepromFlag;
 
 void MX_I2C4_Init(void)
 {
@@ -182,4 +179,24 @@ void clearAllDataInEEPROM() {
     bool rtn = parSave(nonData, 0, MAX_EEPROM_SIZE);
     if(rtn) writeString(DEBUG_USART, "Success to clear all data in EEPROM.\r\n");
     else    writeString(DEBUG_USART, "Fail to clear all data in EEPROM.\r\n");
+}
+
+int eeprom_load_eepromFlag() {
+    uint8_t temp[8+1] = {0};
+    bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)8);
+    if(loadResult) {
+        eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
+        eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+int eeprom_saveData_and_jumpNextPos(uint8_t * data) {
+    bool res = parSave(data, eepromFlag.nextSaveAddress, payloadLen);
+    if(res) changeSaveAddress(eepromFlag.nextSaveAddress + payloadLen);
+
+    return res ? 1 : 0;
 }

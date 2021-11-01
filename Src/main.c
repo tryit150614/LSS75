@@ -18,41 +18,24 @@ SD card version
 #include "st_rtc.h"
 #include "ringBuffer1.h"
 #include "serialHandlers.h"
-#include "lora_rylr890.h"
 #include "nodeManager.h"
 #include "flashWrapper.h"
 #include "adc.h"
 #include "fsm.h"
-#include "fsm_nbiot.h"
-#include "rng.h"
 #include "eeprom.h"
-#include "rtcController.h"
-#include "delay.h"
 
-struct ResendStruct flashResend = {(uint64_t)1200};
-struct MACStruct flashMAC = {9};
-struct HashStruct flashHASH = {"FDlpdx5y"};
-struct FlashFlagStruct flashFlag = {1};
-
-extern uint16_t adc1DmaBuffer[DMA1_ADC_BUFFER_SIZE];
 extern struct FSMAttributes fsmAttributes;
-extern struct FSMAttributes_NB fsmAttributes_NB;
-
-extern volatile uint32_t flashResendAddr;
-extern volatile uint32_t flashMACAddr;
-extern const unsigned long MACStructSize;
 
 const unsigned int lpuart1DataSize = 800;
 uint8_t lpuart1Data[lpuart1DataSize];
 volatile ringBufferStruct lpuart1Buf;
 extern struct inputString inputStringLpuart1;
-extern unsigned int lpuart1DataLength;
+extern int lpuart1DataLength;
 
 const unsigned int usart1DataSize = 800;
 uint8_t usart1Data[usart1DataSize];
 volatile ringBufferStruct usart1Buf;
 extern struct inputString inputStringUsart1;
-extern unsigned int usart1DataLength;
 
 const unsigned int uart4DataSize = 240;
 uint8_t uart4Data[uart4DataSize];
@@ -79,9 +62,6 @@ volatile bool moduleFlag   = false;
 volatile bool sendOKFlag   = false;
 /*----------*/
 
-I2C_HandleTypeDef hi2c4;
-EEPROMFlag eepromFlag;
-
 /* Private variables ---------------------------------------------------------*/
 extern Watchdog watchdog;
 extern Rtc      rtc;
@@ -98,21 +78,14 @@ void TaskCLI(void *pvParameters);
 void TaskLED(void *pvParameters);
 void vSendCmd(void *pvParameters);
 void vGetNBIotData(void *pvParameters);
-void vNBIOT_fsm(void *pvParameters);
 
 uint32_t month2day(uint32_t month);
-void ledBlinking(GPIO_TypeDef *GPIOx, uint32_t pinMask, uint32_t ligth, uint32_t dark);
 
 int main(void)
 {
   watchdog.enable();
   HAL_Init();
   __enable_irq();
-
-  if(flashRead(FLASH_FLAG_START_ADDR) != 0)
-    nodeManager_initFlashData();
-
-  findFlashPosition();
 
   SystemClock_Config();
   MX_GPIO_Init();
@@ -122,50 +95,17 @@ int main(void)
   MX_UART4_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  MX_RNG_Init();
   MX_I2C4_Init();
 
   rtc.init();
-  // if(DWT_Delay_Init()) DEBUG("DWT init FAIL!\r\n");
-  // else                 DEBUG("DWT init OK\r\n");
-
-  /* Setting rtc alert */
-  if(pResendTime == 0 || pResendTime > 86400)
-    pResendTime = 1200;
-
-  LL_PWR_EnableBkUpAccess();
-  LL_RTC_DisableWriteProtection(RTC);
-  LL_RTC_ClearFlag_WUT(RTC);
-  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
-  RTC->CR &= ~RTC_CR_WUTE;
-  HAL_Delay(1);
-  RTC->WUTR = pResendTime;
-  RTC->CR = RTC_CR_WUTE | RTC_CR_WUTIE | RTC_CR_WUCKSEL_2;
-  LL_RTC_EnableWriteProtection(RTC);
-  EXTI->RTSR1 |= EXTI_RTSR1_RT20;
-  EXTI->IMR1 |= EXTI_IMR1_IM20;
-  NVIC_EnableIRQ(RTC_WKUP_IRQn);
-  NVIC_SetPriority(RTC_WKUP_IRQn, 2);
-  LL_PWR_DisableBkUpAccess();
-  /***********************/
 
   ringBuffer_new(&lpuart1Buf, lpuart1Data, lpuart1DataSize);
-  ringBuffer_resetBuffer(&lpuart1Buf);
-
   ringBuffer_new(&usart1Buf, usart1Data, usart1DataSize);
-  ringBuffer_resetBuffer(&usart1Buf);
-
   ringBuffer_new(&uart4Buf, uart4Data, uart4DataSize);
-  ringBuffer_resetBuffer(&uart4Buf);
-
   ringBuffer_new(&usart2Buf, usart2Data, usart2DataSize);
-  ringBuffer_resetBuffer(&usart2Buf);
-
   ringBuffer_new(&usart3Buf, usart3Data, usart3DataSize);
-  ringBuffer_resetBuffer(&usart3Buf);
 
   powerOnRS485IC();
-  // powerOnLora();
   EEPROM_EnableProtect();
 
   MX_ADC1_Init();
@@ -197,12 +137,6 @@ int main(void)
     while (1);
   }
 
-  DEBUG("RTC : ");DEBUG_uint(rtc.getYear());DEBUG_uint(rtc.getMonth());DEBUG_uint(rtc.getDay());
-  DEBUG("_");     DEBUG_uint(rtc.getHour());DEBUG_uint(rtc.getMinute());DEBUG_uint(rtc.getSecond());DEBUG("\r\n");
-  // if(flashRead(FLASH_FLAG_START_ADDR) != 0) {
-  //   nodeManager_riseInitFlag();
-  //   writeString(DEBUG_USART, "Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));writeString(DEBUG_USART, "\r\n");
-  // }
   if(flashRead(FLASH_FLAG_START_ADDR) != 0)
   {
     writeString(DEBUG_USART, "----------- init -----------\r\n");
@@ -216,28 +150,22 @@ int main(void)
     powerLED_Toggle();
     changeSaveAddress(dataFirstAddress);
     changeSendAddress(dataFirstAddress);
-    HAL_Delay(10);
-    nodeManager_riseInitFlag();
-  }
-  uint8_t temp[8+1] = {0};
-  bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)8);
-  if(loadResult) {
-    eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
-    eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
-    writeString(DEBUG_USART, "Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);writeString(DEBUG_USART, "\r\n");
-    writeString(DEBUG_USART, "Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);writeString(DEBUG_USART, "\r\n");
-  }
-  else {
-    writeString(DEBUG_USART, "Load saveADdress & sendAddress FAIL!\r\n");
+    nodeManager_initFlashData();
   }
 
-  writeString(DEBUG_USART, "Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "MAC : ");writeUint32(DEBUG_USART, pMAC);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "Hash : ");writeString(DEBUG_USART, pHash);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "pResendTime : ");writeUint32(DEBUG_USART, pResendTime);writeString(DEBUG_USART, "\r\n");
-  writeString(DEBUG_USART, "-----------------------------------\r\n");
-  DEBUG("Version 1.3.8 2021/09/29\r\n");
-  DEBUG("READY\r\n");
+  findFlashPosition();
+  if(!eeprom_load_eepromFlag()) DEBUG("Load eepromFlag fail!\r\n");
+
+  /* Setting rtc alert */
+  RTC_SetAlert(pResendTime > 86400 ? 1200 : pResendTime);
+  /***********************/
+
+  DEBUG("Init : ");writeUint32(DEBUG_USART, flashRead(FLASH_FLAG_START_ADDR));DEBUG("\r\n");
+  DEBUG("MAC : ");writeUint32(DEBUG_USART, pMAC);DEBUG("\r\n");
+  DEBUG("Hash : ");DEBUG(pHash);DEBUG("\r\n");
+  DEBUG("ResendTime : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
+  DEBUG("Version 1.3.9 2021/11/01\r\n");
+  DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */
   vTaskStartScheduler();
@@ -355,16 +283,15 @@ void TaskCLI(void *pvParameters) {
               memcpy(macStr, inputStringUart4.string + 1, 5);
               memcpy(pHash, inputStringUart4.string + 6, 8);
               uint32_t mac = strtol(macStr, NULL, 10);
-              writeString(DEBUG_USART, "******* Change MAC to ");
+              DEBUG("******* Change MAC to ");
               writeUint32(DEBUG_USART, mac);
-              writeString(DEBUG_USART, " *******\r\n");
-              writeString(DEBUG_USART, "******* Change hash to ");
-              writeString(DEBUG_USART, pHash);
-              writeString(DEBUG_USART, " *******\r\n");
+              DEBUG(" *******\r\n");
+              DEBUG("******* Change hash to ");
+              DEBUG(pHash);
+              DEBUG(" *******\r\n");
 
               nodeManager_modifyMAC(mac);
               nodeManager_modifyHash(pHash);
-              // rs485Flag = false;
           }
       }
 
@@ -397,13 +324,9 @@ void TaskLED(void *pvParameters) {
 void vSendCmd(void *pvParameters) {
   for(;;) {
     vTaskDelay(pdMS_TO_TICKS(1));
-    // sendBinaryInBuffer(&inputStringUsart1, &usart1Buf);
     parseStringInBuffer(&inputStringUsart2, &usart2Buf);
     if (inputStringUsart2.ready == 1) {
       inputStringUsart2.ready = 0;
-      // writeString(DEBUG_USART, "LEN = ");writeInt(DEBUG_USART, usart1DataLength);
-      // writeString(DEBUG_USART, ", Send : ");
-      // writeString(DEBUG_USART, inputStringUsart2.string);writeString(DEBUG_USART, "\r\n");
       writeString(LPUART1, inputStringUsart2.string);
     }
   }
@@ -417,77 +340,11 @@ void vGetNBIotData(void *pvParameters) {
     receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
     if (inputStringLpuart1.ready == 1) {
       inputStringLpuart1.ready = 0;
-      // writeString(DEBUG_USART, "NBIOT Response, LEN = ");writeInt(DEBUG_USART, len);writeString(DEBUG_USART, "\r\n");
       writeString(DEBUG_USART, "-----------------Task------------------\r\n");
       writeData(DEBUG_USART, inputStringLpuart1.string, len);
       writeString(DEBUG_USART, "\r\n-----------------------------------\r\n");
-      // writeData(DEBUG_USART, (char *)lpuart1Buf.bufferPtr, 800);
     }
   }
-}
-
-void vNBIOT_fsm(void *pvParameters) {
-  for (;;) {
-      fsmAttributes_NB.state = (StateNB)(*fsmAttributes_NB.state)();
-  }
-}
-
-uint32_t month2day(uint32_t month) {
-  switch(month - 1) {
-    case 0: return 0;
-    break;
-    case 1: return 31;
-    break;
-    case 2: return 31+28;
-    break;
-    case 3: return 31+28+31;
-    break;
-    case 4: return 31+28+31+30;
-    break;
-    case 5: return 31+28+31+30+31;
-    break;
-    case 6: return 31+28+31+30+31+30;
-    break;
-    case 7: return 31+28+31+30+31+30+31;
-    break;
-    case 8: return 31+28+31+30+31+30+31+31;
-    break;
-    case 9: return 31+28+31+30+31+30+31+31+30;
-    break;
-    case 10: return 31+28+31+30+31+30+31+31+30+31;
-    break;
-    case 11: return 31+28+31+30+31+30+31+31+30+31+30;
-    break;
-  }
-
-  return 0;
-}
-
-uint32_t getUnixTimestamp() {
-
-  uint8_t leapYearCount = 0;
-  uint32_t baseSeconds = 946684800; // It's 1970/1/1~2020/1/1 total seconds
-
-  volatile uint32_t second = rtc.getSecond();
-  volatile uint32_t minute = rtc.getMinute();
-  volatile uint32_t hour = rtc.getHour();
-  volatile uint32_t day = rtc.getDay();
-  volatile uint32_t month = rtc.getMonth();
-  volatile uint32_t year = rtc.getYear();
-
-  leapYearCount = year / 4 + 1; //unit : day
-  if(year % 4 == 0 && month < 3) leapYearCount--;
-
-  return  baseSeconds + (year * 365 * 86400) +
-          (month2day(month) + day + leapYearCount - 1) * 86400 +
-          (hour * 3600) + (minute * 60) + second;
-}
-
-void ledBlinking(GPIO_TypeDef *GPIOx, uint32_t pinMask, uint32_t ligth, uint32_t dark) {
-  LL_GPIO_SetOutputPin(GPIOx, pinMask);
-  HAL_Delay(ligth);
-  LL_GPIO_ResetOutputPin(GPIOx, pinMask);
-  HAL_Delay(dark);
 }
 
 void SystemClock_Config(void)
@@ -507,9 +364,6 @@ void SystemClock_Config(void)
     
   }
   LL_PWR_EnableBkUpAccess();
-  if(flashRead(FLASH_FLAG_START_ADDR) != 0) {
-    LL_RCC_ForceBackupDomainReset();
-  }
   LL_RCC_ReleaseBackupDomainReset();
   LL_RCC_LSE_SetDriveCapability(LL_RCC_LSEDRIVE_HIGH);
   LL_RCC_LSE_Enable();
