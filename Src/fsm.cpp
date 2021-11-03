@@ -24,6 +24,7 @@
 
 #include "stm32l4xx_hal_pwr.h"
 
+
 extern struct inputString inputStringUsart2;
 extern volatile ringBufferStruct usart2Buf;
 
