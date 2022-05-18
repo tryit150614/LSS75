@@ -164,7 +164,7 @@ int main(void)
   DEBUG("MAC : ");writeUint32(DEBUG_USART, pMAC);DEBUG("\r\n");
   DEBUG("Hash : ");DEBUG(pHash);DEBUG("\r\n");
   DEBUG("ResendTime : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
-  DEBUG("Version 1.3.9 2021/11/01\r\n");
+  DEBUG("Version 1.4.0 2022/05/18\r\n");
   DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */

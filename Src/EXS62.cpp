@@ -180,20 +180,23 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
     uint32_t len = payloadlen;
     for(int i = 0; i < count; i++)
     {
+      HAL_Delay(50);
       sendCmd("AT^SISW=6,1500\r\n");
       HAL_Delay(50);
       writeData(LPUART1, pData, 1500);
       pData += 1500;
       len -= 1500;
 
-      if(exs62_getResponse(3, "SISW: 6,1")) continue;
-      else                                  return 0;
+      if(!exs62_getResponse(3, "SISW: 6,1")) return 0;
+      DEBUG("Send OK\r\n");
     }
 
+    HAL_Delay(50);
     sprintf(cmd, "AT^SISW=6,%lu\r\n", len);
     sendCmd(cmd);
     HAL_Delay(50);
     writeData(LPUART1, pData, len);
+    DEBUG("Send Done\r\n");
   }
 
   return 1;

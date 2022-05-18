@@ -77,13 +77,11 @@ void LPUART1_IRQHandler(void)
     lpuart1DataLength += len;
     beforePosLpuart1 = currentPos;
     
-    DEBUG("(NBIOT) \r\n");
     while(Lpuart1StartPos != currentPos) {
       ringBuffer_write(&lpuart1Buf, dmaLpuart1Buffer[Lpuart1StartPos]);
       if(len < 1000) sendChar(DEBUG_USART, dmaLpuart1Buffer[Lpuart1StartPos]);
       Lpuart1StartPos = (Lpuart1StartPos + 1) % DMA_LPUART1_BUFFER_SIZE;
     }
-    DEBUG("\r\n");
 
     Lpuart1StartPos = currentPos;
   }
