@@ -169,17 +169,18 @@ funcptr fsm_getRS485Data()
 {
   DEBUG(">>fsm_getRS485Data<<\r\n");
 
-  char rs485Data_Soil[11 * 2 + 1]   = {0};
-  char rs485Data_Soil_2[11 * 2 + 1] = {0};
-  char rs485Data_PH[9 * 2 + 1]      = {0};
-  char rs485Data_PH_2[7 * 2 + 1]    = {0};
-  char rs485Data_Air[11 * 2 + 1]    = {0};
-  char rawData_Solar[7 * 2 + 1]     = {0};
-  char rawData_Waterdepth[7 * 2 + 1]= {0};
-  char rawData_SR[7 * 2 + 1]        = {0};
-  char rawData_WS[7 * 2 + 1]        = {0};
-  char rawData_WS_2[7 * 2 + 1]      = {0};
-  char rawData_Leaf[9 * 2 + 1]      = {0};
+  char rs485Data_Soil[11 * 2 + 1]      = {0};
+  char rs485Data_Soil_2[11 * 2 + 1]    = {0};
+  char rs485Data_PH[9 * 2 + 1]         = {0};
+  char rs485Data_PH_2[7 * 2 + 1]       = {0};
+  char rs485Data_Air[11 * 2 + 1]       = {0};
+  char rawData_Solar[7 * 2 + 1]        = {0};
+  char rawData_Waterdepth[7 * 2 + 1]   = {0};
+  char rawData_Waterdepth_2[7 * 2 + 1] = {0};
+  char rawData_SR[7 * 2 + 1]           = {0};
+  char rawData_WS[7 * 2 + 1]           = {0};
+  char rawData_WS_2[7 * 2 + 1]         = {0};
+  char rawData_Leaf[9 * 2 + 1]         = {0};
 
   powerOnRS485Sensor();
   vTaskDelay(pdMS_TO_TICKS(10000));
@@ -208,6 +209,8 @@ funcptr fsm_getRS485Data()
   getRS485Data(rawData_WS_2, Laytion_windSpeed_ACK_BYTES);
   transmitRS485(Laytion_leaf_Sensor);
   getRS485Data(rawData_Leaf, Laytion_leaf_ACK_BYTES);
+  transmitRS485(Laytion_waterDepth_New_Sensor);
+  getRS485Data(rawData_Waterdepth_2, Laytion_waterDepth_ACK_BYTES);
 
   powerOffRS485Sensor();
   
@@ -456,6 +459,22 @@ funcptr fsm_getRS485Data()
     memcpy(tempLeafH, rawData_Leaf + 10, 4);
     tempLH = (uint16_t)strtol(tempLeafH, NULL, 16); // 356 (35.6)
     sprintf(leafH, "%d.%01d", tempLH / 10, tempLH % 10);
+  }
+
+  /* New Water depth */ 
+  if(strnlen(rawData_Waterdepth_2, sizeof(rawData_Waterdepth_2)) == 0){
+    DEBUG("New water depth sensor : N/A\r\n");
+  }
+  else {
+    rs485Flag = true;
+    DEBUG("New water depth sensor : ");DEBUG(rawData_Waterdepth_2);DEBUG("\r\n");
+
+    char tempStr[20] = {0};
+    uint32_t tempWD = 0;
+
+    memcpy(tempStr, rawData_Waterdepth_2 + 6, 4);
+    tempWD = (uint32_t)strtol(tempStr, NULL, 16);
+    sprintf(waterDepth, "%lu.0", tempWD);
   }
 
   DEBUG("----------------------------------\r\n");
