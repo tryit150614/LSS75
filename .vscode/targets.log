@@ -5,9 +5,9 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
-
  
-# Make data base, printed on Fri Jun 17 15:30:57 2022
+
+# Make data base, printed on Thu Jun 30 14:17:53 2022
 
 # Variables
 
@@ -81,6 +81,7 @@ IM_CONFIG_PHASE = 1
 STLINK_DIR = ~/tools/STM32Cube/STM32CubeProgrammer/bin/
 # makefile (from 'Makefile', line 39)
 DEBUG = 1
+ 
 # environment
 USERNAME = sean
 # environment
@@ -88,7 +89,6 @@ MAKELEVEL := 0
 # environment
 XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop
 # environment
- 
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
@@ -121,7 +121,6 @@ STLINK_RESET_FLAGS = -c port=SWD -Rst
 # makefile (from 'Makefile', line 1)
 TOOLCHAIN_PATH = $(HOME)/tools/gcc-arm-none-eabi-7-2018-q2-update/bin/
 # environment
- 
 XDG_MENU_PREFIX = gnome-
 # environment
 VSCODE_LOG_STACK = false
@@ -138,6 +137,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # automatic
+ 
 %F = $(notdir $%)
 # environment
 DISPLAY = :0
@@ -162,7 +162,6 @@ GTK_MODULES = gail:atk-bridge
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # environment
- 
 HOME = /home/sean
 # environment
 LESSCLOSE = /usr/bin/lesspipe %s %s
@@ -209,9 +208,8 @@ GNOME_SHELL_SESSION_MODE = ubuntu
 # makefile (from 'Makefile', line 48)
 BUILD_DIR = build
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-719a5210-ad95-4d79-9f0d-7a9e9c76056a.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-d262c5e9-986e-4a79-928e-23ccf74464e4.sock
 # default
- 
 MAKE_VERSION := 4.2.1
 # environment
 USER = sean
@@ -261,12 +259,10 @@ LC_IDENTIFICATION = en_US.UTF-8
 QT_ACCESSIBILITY = 1
 # default
 MAKEFILES := 
- 
 # environment
 LC_NUMERIC = en_US.UTF-8
 # automatic
 <F = $(notdir $<)
- 
 # environment
 PS1 = \u@\h \[\033[01;36m\]\W\[\033[01;32m\]$(git_branch)\[\033[00m\] \$ 
 # makefile (from 'Makefile', line 6)
@@ -278,7 +274,7 @@ LC_ALL = C
 # environment
 GJS_DEBUG_TOPICS = JS ERROR;JS LOG
 # environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/2b9f660e_6f8b_49cd_93f6_36f08c02619e
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/d2a5450d_1a0d_409d_9c8b_60c4eec11c99
 # automatic
 ^F = $(notdir $^)
 # makefile (from 'Makefile', line 20)
@@ -292,7 +288,6 @@ CHROME_DESKTOP = code-url-handler.desktop
 # environment
 WINDOWPATH = 2
 # default
- 
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
 GJS_DEBUG_OUTPUT = stderr
@@ -315,6 +310,7 @@ VSCODE_PID = 266292
 
 # Directories
 
+ 
 # . (device 2052, inode 4862030): 13 files, no impossibilities.
 # Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F (device 2052, inode 667404): 4 files, no impossibilities so far.
 # Src (device 2052, inode 667409): 9 files, no impossibilities.
@@ -325,7 +321,6 @@ VSCODE_PID = 266292
 # Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 (device 2052, inode 533199): 1 files, no impossibilities so far.
 # Src/main.c (device 2052, inode 662930): could not be opened.
 # Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang (device 2052, inode 667407): 1 files, no impossibilities so far.
- 
 # Drivers/STM32L4xx_HAL_Driver/Src (device 2052, inode 402908): 29 files, no impossibilities so far.
 # Src/SARA-R410M.cpp (device 2052, inode 659324): could not be opened.
 # Src/EXS62.cpp (device 2052, inode 659323): could not be opened.
@@ -371,8 +366,7 @@ build/%.o: %.S
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma'
- 
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:45.091838867
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -396,9 +390,8 @@ Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex'
-#  Last modified 2022-06-17 13:41:56.879652984
+#  Last modified 2022-06-17 15:43:50.072177623
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -408,14 +401,14 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o: Drivers/STM32L4xx
 Middlewares/Third_Party/FreeRTOS/Source/queue.c:
 #  Implicit rule search has been done.
 #  Last modified 2021-11-02 17:29:25.030531197
+ 
 #  File has been updated.
 #  Successfully updated.
 
- 
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex'
-#  Last modified 2022-06-17 13:41:56.871652432
+#  Last modified 2022-06-17 15:43:50.404200207
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -425,7 +418,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.o: Drivers/STM32L4xx
 build/Src/eeprom.o: Src/eeprom.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/eeprom'
-#  Last modified 2022-06-17 13:43:19.733351396
+#  Last modified 2022-06-17 15:43:39.839481615
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -434,7 +427,6 @@ build/Src/eeprom.o: Src/eeprom.c
 
 all: buildelf build/LSS75.hex build/LSS75.bin
 #  Command line target.
- 
 #  Implicit rule search has been done.
 #  File does not exist.
 #  File has been updated.
@@ -459,9 +451,8 @@ Src/STM32/stm32l4xx_hal_timebase_tim.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex'
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:48.348060351
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -476,7 +467,6 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c:
 
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.c:
- 
 #  Implicit rule search has been done.
 #  Last modified 2021-11-02 17:29:25.006529552
 #  File has been updated.
@@ -485,8 +475,9 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.c:
 build/Src/STM32/usart.o: Src/STM32/usart.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/usart'
-#  Last modified 2022-06-17 13:43:19.733351396
+#  Last modified 2022-06-17 15:43:43.471728671
 #  File has been updated.
+ 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -500,10 +491,9 @@ Src/STM32/stm32l4xx_it.c:
 #  Successfully updated.
 
 build/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o: Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
- 
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4'
-#  Last modified 2022-06-17 13:41:56.91565546
+#  Last modified 2022-06-17 15:43:56.436610529
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -513,8 +503,7 @@ build/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o: Middlew
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex'
- 
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:49.444134904
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -524,7 +513,6 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.o: Drivers/STM32L4xx
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c:
 #  Implicit rule search has been done.
- 
 #  Last modified 2021-11-02 17:29:24.998529005
 #  File has been updated.
 #  Successfully updated.
@@ -532,7 +520,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c:
 build/Src/STM32/stm32l4xx_hal_msp.o: Src/STM32/stm32l4xx_hal_msp.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/stm32l4xx_hal_msp'
-#  Last modified 2022-06-17 13:43:19.729351121
+#  Last modified 2022-06-17 15:43:42.047631808
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -542,7 +530,7 @@ build/Src/STM32/stm32l4xx_hal_msp.o: Src/STM32/stm32l4xx_hal_msp.c
 build/Src/Basic/ringBuffer1.o: Src/Basic/ringBuffer1.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/Basic/ringBuffer1'
-#  Last modified 2022-06-17 13:43:19.721350571
+#  Last modified 2022-06-17 15:43:41.32358256
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -562,11 +550,11 @@ buildelf: build/Src/SARA-R410M.o build/Src/fsm.o build/Src/EXS62.o build/Src/Bas
 # automatic
 # * := 
 # automatic
- 
 # + := build/Src/SARA-R410M.o build/Src/fsm.o build/Src/EXS62.o build/Src/Basic/serialHandlers.o build/Src/STM32/adc.o build/Src/STM32/st_rtc.o build/Src/STM32/st_watchdog.o build/Src/main.o build/Src/eeprom.o build/Src/Basic/flashWrapper.o build/Src/Basic/nodeManager.o build/Src/Basic/ringBuffer1.o build/Src/STM32/system_stm32l4xx.o build/Src/STM32/stm32l4xx_hal_msp.o build/Src/STM32/stm32l4xx_hal_timebase_tim.o build/Src/STM32/stm32l4xx_it.o build/Src/STM32/usart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.o build/Middlewares/Third_Party/FreeRTOS/Source/croutine.o build/Middlewares/Third_Party/FreeRTOS/Source/event_groups.o build/Middlewares/Third_Party/FreeRTOS/Source/list.o build/Middlewares/Third_Party/FreeRTOS/Source/queue.o build/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.o build/Middlewares/Third_Party/FreeRTOS/Source/tasks.o build/Middlewares/Third_Party/FreeRTOS/Source/timers.o build/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.o build/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o build/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o build/startup_stm32l451xx.o
 # automatic
 # | := 
 # automatic
+ 
 # < := build/Src/SARA-R410M.o
 # automatic
 # ^ := build/Src/SARA-R410M.o build/Src/fsm.o build/Src/EXS62.o build/Src/Basic/serialHandlers.o build/Src/STM32/adc.o build/Src/STM32/st_rtc.o build/Src/STM32/st_watchdog.o build/Src/main.o build/Src/eeprom.o build/Src/Basic/flashWrapper.o build/Src/Basic/nodeManager.o build/Src/Basic/ringBuffer1.o build/Src/STM32/system_stm32l4xx.o build/Src/STM32/stm32l4xx_hal_msp.o build/Src/STM32/stm32l4xx_hal_timebase_tim.o build/Src/STM32/stm32l4xx_it.o build/Src/STM32/usart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc.o build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.o build/Middlewares/Third_Party/FreeRTOS/Source/croutine.o build/Middlewares/Third_Party/FreeRTOS/Source/event_groups.o build/Middlewares/Third_Party/FreeRTOS/Source/list.o build/Middlewares/Third_Party/FreeRTOS/Source/queue.o build/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.o build/Middlewares/Third_Party/FreeRTOS/Source/tasks.o build/Middlewares/Third_Party/FreeRTOS/Source/timers.o build/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.o build/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o build/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o build/startup_stm32l451xx.o
@@ -580,8 +568,7 @@ buildelf: build/Src/SARA-R410M.o build/Src/fsm.o build/Src/EXS62.o build/Src/Bas
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio'
- 
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:48.876096267
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -597,7 +584,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.o: Drivers/STM32L4xx_H
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal'
-#  Last modified 2022-06-17 13:41:56.871652432
+#  Last modified 2022-06-17 15:43:45.387859002
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -621,16 +608,16 @@ Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/timers.o: Middlewares/Third_Party/FreeRTOS/Source/timers.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/timers'
-#  Last modified 2022-06-17 13:41:56.919655736
+#  Last modified 2022-06-17 15:43:55.780565904
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CC) $(COMPILER_FLAGS) $< -o $@
 
+ 
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c:
- 
 #  Implicit rule search has been done.
 #  Last modified 2021-11-02 17:29:24.994528732
 #  File has been updated.
@@ -639,7 +626,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio'
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:44.423793429
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -649,7 +636,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.o: Drivers/STM32L4xx_HA
 build/Src/Basic/nodeManager.o: Src/Basic/nodeManager.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/Basic/nodeManager'
-#  Last modified 2022-06-17 13:43:19.721350571
+#  Last modified 2022-06-17 15:43:40.855550725
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -659,12 +646,11 @@ build/Src/Basic/nodeManager.o: Src/Basic/nodeManager.c
 build/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.o: Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2'
-#  Last modified 2022-06-17 13:41:56.911655186
+#  Last modified 2022-06-17 15:43:56.284600189
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
- 
 	$(CC) $(COMPILER_FLAGS) $< -o $@
 
 # Not a target:
@@ -677,7 +663,7 @@ Src/STM32/st_watchdog.cpp:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc'
-#  Last modified 2022-06-17 13:41:56.879652984
+#  Last modified 2022-06-17 15:43:47.135977907
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -692,7 +678,7 @@ rebuild: clean all
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart'
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:51.02024211
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -723,7 +709,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/croutine.o: Middlewares/Third_Party/FreeRTOS/Source/croutine.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/croutine'
-#  Last modified 2022-06-17 13:41:56.911655186
+#  Last modified 2022-06-17 15:43:54.172456521
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -733,7 +719,7 @@ build/Middlewares/Third_Party/FreeRTOS/Source/croutine.o: Middlewares/Third_Part
 build/Src/STM32/st_watchdog.o: Src/STM32/st_watchdog.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/st_watchdog'
-#  Last modified 2022-06-17 13:43:19.729351121
+#  Last modified 2022-06-17 15:43:38.359380944
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
@@ -743,7 +729,7 @@ build/Src/STM32/st_watchdog.o: Src/STM32/st_watchdog.cpp
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc'
-#  Last modified 2022-06-17 13:41:56.891653808
+#  Last modified 2022-06-17 15:43:51.51627585
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -760,7 +746,8 @@ Src/Basic/serialHandlers.cpp:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti'
-#  Last modified 2022-06-17 13:41:56.875652708
+ 
+#  Last modified 2022-06-17 15:43:50.708220886
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -770,9 +757,8 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.o: Drivers/STM32L4xx_H
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc'
-#  Last modified 2022-06-17 13:41:56.891653808
+#  Last modified 2022-06-17 15:43:53.588416795
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -788,7 +774,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ramfunc'
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:48.592076948
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -812,14 +798,15 @@ Middlewares/Third_Party/FreeRTOS/Source/timers.c:
 # Not a target:
 Src/main.c:
 #  Implicit rule search has been done.
-#  Last modified 2022-06-17 13:43:19.705349471
+#  Last modified 2022-06-17 15:45:28.298859826
 #  File has been updated.
 #  Successfully updated.
 
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng'
-#  Last modified 2022-06-17 13:43:19.705349471
+ 
+#  Last modified 2022-06-17 15:43:54.080450263
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -843,9 +830,8 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti'
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:44.135773838
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -854,7 +840,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.o: Drivers/STM32L4xx_HA
 build/Src/Basic/serialHandlers.o: Src/Basic/serialHandlers.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/Basic/serialHandlers'
-#  Last modified 2022-06-17 13:43:19.721350571
+#  Last modified 2022-06-17 15:43:36.68326694
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
@@ -864,7 +850,7 @@ build/Src/Basic/serialHandlers.o: Src/Basic/serialHandlers.cpp
 build/Middlewares/Third_Party/FreeRTOS/Source/tasks.o: Middlewares/Third_Party/FreeRTOS/Source/tasks.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/tasks'
-#  Last modified 2022-06-17 13:41:56.91565546
+#  Last modified 2022-06-17 15:43:55.540549578
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -888,9 +874,8 @@ Middlewares/Third_Party/FreeRTOS/Source/croutine.c:
 build/Src/STM32/stm32l4xx_it.o: Src/STM32/stm32l4xx_it.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/stm32l4xx_it'
-#  Last modified 2022-06-17 13:43:19.729351121
+#  Last modified 2022-06-17 15:43:42.79968296
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
@@ -906,7 +891,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/list.o: Middlewares/Third_Party/FreeRTOS/Source/list.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/list'
-#  Last modified 2022-06-17 13:41:56.911655186
+#  Last modified 2022-06-17 15:43:54.496478562
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -916,7 +901,7 @@ build/Middlewares/Third_Party/FreeRTOS/Source/list.o: Middlewares/Third_Party/Fr
 build/Src/SARA-R410M.o: Src/SARA-R410M.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/SARA-R410M'
-#  Last modified 2022-06-17 13:43:19.725350845
+#  Last modified 2022-06-17 15:43:34.039087094
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
@@ -924,7 +909,6 @@ build/Src/SARA-R410M.o: Src/SARA-R410M.cpp
 	$(CXX) $(CXXCOMPILER_FLAGS) $< -o $@
 
 # Not a target:
- 
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c:
 #  Implicit rule search has been done.
 #  Last modified 2021-11-02 17:29:24.994528732
@@ -941,7 +925,7 @@ Middlewares/Third_Party/FreeRTOS/Source/tasks.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex'
-#  Last modified 2022-06-17 13:41:56.883653258
+#  Last modified 2022-06-17 15:43:47.624011102
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -958,10 +942,9 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma_ex.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c'
-#  Last modified 2022-06-17 13:43:19.705349471
+#  Last modified 2022-06-17 15:43:46.475933011
 #  File has been updated.
 #  Successfully updated.
- 
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CC) $(COMPILER_FLAGS) $< -o $@
@@ -969,7 +952,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.o: Drivers/STM32L4xx_HA
 build/Src/STM32/stm32l4xx_hal_timebase_tim.o: Src/STM32/stm32l4xx_hal_timebase_tim.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/stm32l4xx_hal_timebase_tim'
-#  Last modified 2022-06-17 13:43:19.729351121
+#  Last modified 2022-06-17 15:43:42.295648677
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -993,7 +976,7 @@ Src/STM32/st_rtc.cpp:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart'
-#  Last modified 2022-06-17 13:41:56.891653808
+#  Last modified 2022-06-17 15:43:51.864299522
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1006,7 +989,6 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.o: Drivers/STM32L4xx_H
 #  Modification time never checked.
 #  File has not been updated.
 
- 
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c:
 #  Implicit rule search has been done.
@@ -1017,14 +999,14 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c:
 # Not a target:
 Src/fsm.cpp:
 #  Implicit rule search has been done.
-#  Last modified 2022-06-17 13:43:19.701349195
+#  Last modified 2022-06-17 15:33:38.43863273
 #  File has been updated.
 #  Successfully updated.
 
 build/Src/STM32/st_rtc.o: Src/STM32/st_rtc.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/st_rtc'
-#  Last modified 2022-06-17 13:43:19.725350845
+#  Last modified 2022-06-17 15:43:38.027358361
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
@@ -1040,7 +1022,6 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c:
 
 # Not a target:
 Src/STM32/system_stm32l4xx.c:
- 
 #  Implicit rule search has been done.
 #  Last modified 2022-06-17 13:43:19.701349195
 #  File has been updated.
@@ -1049,7 +1030,7 @@ Src/STM32/system_stm32l4xx.c:
 build/Src/Basic/flashWrapper.o: Src/Basic/flashWrapper.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/Basic/flashWrapper'
-#  Last modified 2022-06-17 13:43:19.721350571
+#  Last modified 2022-06-17 15:43:40.32751481
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1065,7 +1046,7 @@ startup_stm32l451xx.s:
 
 build/Src/main.o: Src/main.c
 #  Implicit rule search has not been done.
-#  Last modified 2022-06-17 13:43:19.737351669
+#  Last modified 2022-06-17 15:45:33.219194589
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 152):
@@ -1075,7 +1056,6 @@ build/Src/main.o: Src/main.c
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.c:
 #  Implicit rule search has been done.
- 
 #  Last modified 2021-11-02 17:29:25.006529552
 #  File has been updated.
 #  Successfully updated.
@@ -1097,14 +1077,14 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lpuart.c:
 build/Src/fsm.o: Src/fsm.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/fsm'
-#  Last modified 2022-06-17 13:43:19.733351396
+#  Last modified 2022-06-17 15:43:35.171164093
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
 	@mkdir -p $(dir $@) 2> /dev/null
- 
 	$(CXX) $(CXXCOMPILER_FLAGS) $< -o $@
 
+ 
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -1123,7 +1103,6 @@ Src/EXS62.cpp:
 build/LSS75.hex:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 
 download:
@@ -1145,7 +1124,6 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.c:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.c:
 #  Implicit rule search has been done.
 #  Last modified 2021-11-02 17:29:24.994528732
- 
 #  File has been updated.
 #  Successfully updated.
 
@@ -1173,19 +1151,17 @@ Src/STM32/adc.cpp:
 build/Src/EXS62.o: Src/EXS62.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/EXS62'
-#  Last modified 2022-06-17 13:43:19.721350571
+#  Last modified 2022-06-17 15:43:35.971218509
 #  File has been updated.
- 
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CXX) $(CXXCOMPILER_FLAGS) $< -o $@
 
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.c
- 
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim'
-#  Last modified 2022-06-17 13:41:56.883653258
+#  Last modified 2022-06-17 15:43:52.732358567
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1202,7 +1178,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/event_groups.o: Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/event_groups'
-#  Last modified 2022-06-17 13:41:56.911655186
+#  Last modified 2022-06-17 15:43:54.364469582
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1212,7 +1188,7 @@ build/Middlewares/Third_Party/FreeRTOS/Source/event_groups.o: Middlewares/Third_
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex'
-#  Last modified 2022-06-17 13:41:56.879652984
+#  Last modified 2022-06-17 15:43:46.751951785
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1222,18 +1198,17 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.o: Drivers/STM32L4xx
 build/Src/STM32/adc.o: Src/STM32/adc.cpp
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/adc'
-#  Last modified 2022-06-17 13:43:19.725350845
+#  Last modified 2022-06-17 15:43:37.279307481
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 163):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CXX) $(CXXCOMPILER_FLAGS) $< -o $@
 
- 
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_adc'
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:44.779817644
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1250,15 +1225,13 @@ rst:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr'
- 
-#  Last modified 2022-06-17 13:41:56.879652984
+#  Last modified 2022-06-17 15:43:49.716153406
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CC) $(COMPILER_FLAGS) $< -o $@
 
- 
 # Not a target:
 Src/eeprom.c:
 #  Implicit rule search has been done.
@@ -1269,7 +1242,7 @@ Src/eeprom.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o: Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port'
-#  Last modified 2022-06-17 13:41:56.911655186
+#  Last modified 2022-06-17 15:43:56.57261978
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1285,7 +1258,6 @@ build/LSS75.bin:
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.c:
 #  Implicit rule search has been done.
- 
 #  Last modified 2021-11-02 17:29:25.002529279
 #  File has been updated.
 #  Successfully updated.
@@ -1307,15 +1279,15 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c:
 # Not a target:
 Src/STM32/usart.c:
 #  Implicit rule search has been done.
- 
 #  Last modified 2022-06-17 13:43:19.701349195
+ 
 #  File has been updated.
 #  Successfully updated.
 
 build/startup_stm32l451xx.o: startup_stm32l451xx.s
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'startup_stm32l451xx'
-#  Last modified 2022-06-17 13:41:56.935656838
+#  Last modified 2022-06-17 15:43:56.612622501
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 167):
@@ -1325,8 +1297,7 @@ build/startup_stm32l451xx.o: startup_stm32l451xx.s
 build/Src/STM32/system_stm32l4xx.o: Src/STM32/system_stm32l4xx.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Src/STM32/system_stm32l4xx'
- 
-#  Last modified 2022-06-17 13:43:19.729351121
+#  Last modified 2022-06-17 15:43:41.575599701
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1336,13 +1307,12 @@ build/Src/STM32/system_stm32l4xx.o: Src/STM32/system_stm32l4xx.c
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash'
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:48.016037767
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CC) $(COMPILER_FLAGS) $< -o $@
- 
 
 # Not a target:
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c:
@@ -1354,8 +1324,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.o: Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/stream_buffer'
- 
-#  Last modified 2022-06-17 13:41:56.91565546
+#  Last modified 2022-06-17 15:43:55.092519104
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1372,7 +1341,7 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.c:
 build/Middlewares/Third_Party/FreeRTOS/Source/queue.o: Middlewares/Third_Party/FreeRTOS/Source/queue.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Middlewares/Third_Party/FreeRTOS/Source/queue'
-#  Last modified 2022-06-17 13:41:56.91565546
+#  Last modified 2022-06-17 15:43:54.844502234
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1393,7 +1362,6 @@ Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c:
 #  File has been updated.
 #  Successfully updated.
 
- 
 # Not a target:
 Src/STM32/stm32l4xx_hal_msp.c:
 #  Implicit rule search has been done.
@@ -1404,7 +1372,7 @@ Src/STM32/stm32l4xx_hal_msp.c:
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils'
-#  Last modified 2022-06-17 13:41:56.891653808
+#  Last modified 2022-06-17 15:43:43.85175452
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1414,7 +1382,7 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.o: Drivers/STM32L4xx_H
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma'
-#  Last modified 2022-06-17 13:41:56.875652708
+#  Last modified 2022-06-17 15:43:49.204118578
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
@@ -1424,13 +1392,12 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.o: Drivers/STM32L4xx_HA
 build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o: Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.c
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex'
-#  Last modified 2022-06-17 13:41:56.887653534
+#  Last modified 2022-06-17 15:43:53.184389314
 #  File has been updated.
 #  Successfully updated.
 #  recipe to execute (from 'Makefile', line 159):
 	@mkdir -p $(dir $@) 2> /dev/null
 	$(CC) $(COMPILER_FLAGS) $< -o $@
- 
 
 # files hash-table stats:
 # Load=121/1024=12%, Rehash=0, Collisions=19/367=5%
@@ -1448,6 +1415,6 @@ build/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o: Drivers/STM32L4xx
 # strcache performance: lookups = 369 / hit rate = 26%
 # hash-table stats:
 # Load=273/8192=3%, Rehash=0, Collisions=11/369=3%
-# Finished Make data base on Fri Jun 17 15:30:57 2022
+# Finished Make data base on Thu Jun 30 14:17:53 2022
 
  

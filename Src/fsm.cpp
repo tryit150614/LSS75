@@ -61,6 +61,7 @@ static char     sunRadiation[10]  = "0";
 static char     windSpeed [10]    = "0.0";
 static char     leafH  [10]       = "0.0";
 static char     leafT  [10]       = "0.0";
+static char     dewPoint[10]      = "0.0";
 static char     newData[256+1]         = {0};
 static char     readySendData[10500+1] = {0};
 static uint32_t amountOfData     = 0;
@@ -291,6 +292,13 @@ funcptr fsm_getRS485Data()
     memcpy(tempAirHStr, rs485Data_Air + 10, 4);
     tempAH = (uint16_t)strtol(tempAirHStr, NULL, 16); // 3000 (30.00%)
     sprintf(airH, "%lu.%02lu", tempAH / 100, tempAH % 100);
+
+    /* DewPoint */
+    float _hu = tempAT/10 + (float)(tempAT%10)/10.0;
+    float _te = tempAH/10 + (float)(tempAH%10)/10.0;
+    float gm = (17.271 * (float)_te / (237.7 + (float)_te)) + log(_hu / 100.0);
+    float _dewpoint = (237.7 * gm) / (17.271 - gm);
+    sprintf(dewPoint, "%d.%02d", (int)_dewpoint, (int)(_dewpoint*100)%100);
   }
 
   DEBUG("\r\n--------- PRS Sensor ---------\r\n");
@@ -598,7 +606,7 @@ funcptr nb_writeNewDataInBuffer() {
             soilPH,
             airT,
             airH,
-            "0.0",      // DewPoint
+            dewPoint,      // DewPoint
             solra,
             waterDepth,
             sunRadiation,
