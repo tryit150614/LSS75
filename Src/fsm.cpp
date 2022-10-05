@@ -582,9 +582,9 @@ funcptr nb_getSignalPower() {
     return (funcptr)nb_writeNewDataInBuffer;
   }
 
+  vTaskDelay(pdMS_TO_TICKS(100));
   /* Get power */
   if(!isCatM) { // Ublox
-    HAL_Delay(50);
     DEBUG("(UART) AT+CESQ\r\n");
     sara_getRSSI(RSSI);
   }else { // Cat M

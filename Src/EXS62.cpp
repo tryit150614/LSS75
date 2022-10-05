@@ -203,9 +203,8 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
 }
 
 void exs62_getRSSI(char * out) {
-  sendCmd("AT^SMONI\r\n");
-  HAL_Delay(50);
-  if(exs62_getResponse(1, "^SMONI:")) {
+  sendCmd((char*)"AT^SMONI\r\n");
+  if(exs62_getResponse(2, "^SMONI:")) {
     // RSRP於第12格
     char *str;
     strtok(inputStringLpuart1.string, ",");

@@ -164,7 +164,7 @@ int main(void)
   DEBUG("MAC : ");writeUint32(DEBUG_USART, pMAC);DEBUG("\r\n");
   DEBUG("Hash : ");DEBUG(pHash);DEBUG("\r\n");
   DEBUG("ResendTime : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
-  DEBUG("FD Version 1.4.2 2022/06/30\r\n");
+  DEBUG("FD Version 1.4.3 2022/10/05\r\n");
   DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */
