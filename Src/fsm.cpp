@@ -294,8 +294,8 @@ funcptr fsm_getRS485Data()
     sprintf(airH, "%lu.%02lu", tempAH / 100, tempAH % 100);
 
     /* DewPoint */
-    float _hu = tempAT/10 + (float)(tempAT%10)/10.0;
-    float _te = tempAH/10 + (float)(tempAH%10)/10.0;
+    float _hu = tempAH/10 + (float)(tempAH%10)/10.0;
+    float _te = tempAT/10 + (float)(tempAT%10)/10.0;
     float gm = (17.271 * (float)_te / (237.7 + (float)_te)) + log(_hu / 100.0);
     float _dewpoint = (237.7 * gm) / (17.271 - gm);
     sprintf(dewPoint, "%d.%02d", (int)_dewpoint, (int)(_dewpoint*100)%100);
