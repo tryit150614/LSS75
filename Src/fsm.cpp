@@ -241,6 +241,7 @@ funcptr fsm_getRS485Data()
     memcpy(tempStr, rs485Data_Soil + 10, 4);
     tempUint = (uint32_t)strtol(tempStr, NULL, 16) / 100;
     sprintf(soilVWC, "%lu", tempUint);
+    DEBUG("SoilVMC : ");DEBUG(soilVWC);DEBUG("\r\n");
 
     /* Soil EC */
     memset(tempStr, 0, 20);
@@ -680,8 +681,8 @@ funcptr nb_writeDataInNBIOT() {
     if(sara_writeInFileSystem(tempArray, len)) DEBUG("Write in filesystem OK\r\n");
     else                                       DEBUG("Fail to write data in filesystem\r\n");
   } else {
-    if(!exs62_preparePayload_Connect(len)) DEBUG("exs62_preparePayload_Connect fail\r\n");
-    if(!exs62_http_send(tempArray, len))   DEBUG("exs62_http_send fail\r\n");
+    if(exs62_preparePayload_Connect(len)) DEBUG("exs62_preparePayload_Connect fail\r\n");
+    if(exs62_http_send(tempArray, len))   DEBUG("exs62_http_send fail\r\n");
     return (funcptr)catM_getResponse;
   }
 
@@ -835,26 +836,20 @@ funcptr catM_getResponse() {
 
   /* 這裡需要出分出200、422和其他 */
   /* If http status is 422 */
-  if(exs62_getResponse(3, "HTTP/1.1 422")) {
-    DEBUG("Result : FAIL!State 422.\r\n");
+  // if(!exs62_getResponse(3, "HTTP/1.1 422")) {
+  //   DEBUG("Result : FAIL!State 422.\r\n");
     
-    /* 關閉連線 */
-    sendCmd("AT^SISC=6\r\n");
-    if(!exs62_getResponse(3, "OK"))
-    {
-      DEBUG("Close connection fail!\r\n");
-    }
-    else
-      DEBUG("Close connection OK\r\n");
+  //   /* 關閉連線 */
+  //   if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
+  //   else                        DEBUG("Close connection OK\r\n");
 
-    eeprom_ClearData();
+  //   eeprom_ClearData();
 
-    return (funcptr)fsm_sleep;
-  }
+  //   return (funcptr)fsm_sleep;
+  // }
 
   /* If http state is 200 or other */
-  char *part = strstr(inputStringLpuart1.string, "^SISR: 6,1");
-  if(part == NULL) { /* Not 200 */
+  if(exs62_getResponse(5, "^SISR: 6,1")) { /* Not 200 */
     DEBUG("Result : Fail!\r\n");
 
     DEBUG("*-*-*-*-*-*-*-*-*-*-*\r\n");
@@ -862,15 +857,8 @@ funcptr catM_getResponse() {
     DEBUG("\r\n*-*-*-*-*-*-*-*-*-*-*\r\n");
 
     /* 關閉連線 */
-    sendCmd("AT^SISC=6\r\n");
-    if(!exs62_getResponse(3, "OK"))
-    {
-      DEBUG("Close connection fail!\r\n");
-    }
-    else
-    {
-      DEBUG("Close connection OK\r\n");
-    }
+    if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
+    else                        DEBUG("Close connection OK\r\n");
 
     //儲存最新一筆資料
     DEBUG("Save in eeprom.\r\n");
@@ -894,7 +882,7 @@ funcptr catM_getResponse() {
   DEBUG("\r\n=================\r\n");
 
   /* Get resendTime and rtc time */
-  part = strstr(inputStringLpuart1.string, "\"ack\":");
+  char *part = strstr(inputStringLpuart1.string, "\"ack\":");
   uint32_t startPos = part - inputStringLpuart1.string;
   char resendTime[10] = {0};
   char timestemp[15] = {0};
@@ -951,19 +939,8 @@ funcptr catM_getResponse() {
   }
 
   /* 關閉連線 */
-  sendCmd("AT^SISC=6\r\n");
-  if(!exs62_getResponse(3, "OK"))
-  {
-    DEBUG("Close connection fail!\r\n");
-
-    sendCmd("AT^SISC=6\r\n");
-    if(!exs62_getResponse(3, "OK"))
-      DEBUG("Close connection fail again!\r\n");
-  }
-  else
-  {
-    DEBUG("Clsoe connection OK\r\n");
-  }
+  if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
+  else                        DEBUG("Close connection OK\r\n");
 
   return (funcptr)fsm_sleep;
 }
@@ -976,77 +953,9 @@ funcptr catM_Connect_And_Send() {
             );
 
   // 設定資料長度
-  char cmd[100] = {0};
-  sprintf(cmd, "AT^SISS=6,\"hcContLen\",\"%lu\"\r\n", newPayloadLen);
-  sendCmd(cmd);
-  if(!exs62_getResponse(3, "OK"))
-  {
-    DEBUG("Setting hcContLen fail!\r\n");
-  }
-  else
-    DEBUG("Setting hcContLen OK\r\n");
-
-  // 開啟連線 + 寫資料 + 傳送
-  sendCmd("AT^SISO=6\r\n");
-  if(!exs62_getResponse(5, "^SISW: 6,1"))
-  {
-    DEBUG("AT^SISO=6 fail!\r\n");
-    sendCmd("AT^SISO=6\r\n");
-    if(!exs62_getResponse(5, "^SISW: 6,1"))
-    {
-      DEBUG("AT^SISO=6 fail again!\r\n");
-      NBIOT_PowerOn();
-      vTaskDelay(pdMS_TO_TICKS(500));
-      return (funcptr)fsm_idle;
-    }
-  }
-  else
-  {
-    DEBUG("AT^SISO OK\r\n");
-  }
-  memset(inputStringLpuart1.string, 0, sizeof(inputStringLpuart1.string));
-  memset(cmd, 0, sizeof(cmd));
-
-  DEBUG("LEN = ");writeUint32(DEBUG_USART, newPayloadLen);DEBUG("\r\n");
-  DEBUG("Ready to write data ...\r\n");
-  if(newPayloadLen <= 1500)
-  {
-    sprintf(cmd, "AT^SISW=6,%lu\r\n", newPayloadLen);
-    sendCmd(cmd);
-    HAL_Delay(50);
-    sendCmd(newData);
-  }
-  else
-  {
-    char * pData = tempArray;
-    uint8_t count = newPayloadLen / 1500;
-    uint32_t len = newPayloadLen;
-    DEBUG("Count = ");writeUint32(DEBUG_USART, count);DEBUG("\r\n");
-    for(int i = 0; i < count; i++)
-    {
-      sendCmd("AT^SISW=6,1500\r\n");
-      HAL_Delay(50);
-      writeData(LPUART1, pData, 1500);
-      pData += 1500;
-      len -= 1500;
-
-      if(exs62_getResponse(3, "SISW: 6,1"))
-      {
-        DEBUG("Send OK\r\n");
-        continue;
-      }
-      else
-      {
-        DEBUG("Send Fail\r\n");
-        break;
-      }
-    }
-
-    sprintf(cmd, "AT^SISW=6,%lu\r\n", len);
-    sendCmd(cmd);
-    HAL_Delay(50);
-    writeData(LPUART1, pData, len);
-  }
+  if(exs62_preparePayload_Connect(newPayloadLen)) DEBUG("AT^SISO=6 fail!\r\n");
+  if(exs62_http_send(tempArray, newPayloadLen))   DEBUG("Send Fail\r\n");
+  else DEBUG("Send OK\r\n");
 
   return (funcptr)nb_getResponse;
 }

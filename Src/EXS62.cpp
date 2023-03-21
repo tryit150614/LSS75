@@ -21,10 +21,13 @@ namespace EXS62_ACK{
     char header[]    = "";
 }
 
+int dbg_exs62_getResponse(int sec, const char* target);
+
+
 int exs62_ready()
 {
     /* Wait module ready */
-    if(!exs62_getResponse(1, EXS62_ACK::bootupStr)) return 0;
+    if(exs62_getResponse(1, "^SYSSTART")) return 0;
 
     return 1;
 }
@@ -33,21 +36,21 @@ int exs62_setHttp()
 {
     /* Http setting */
     sendCmd("AT^SISS=6,srvType,\"Http\"\r\n");
-    if(!exs62_getResponse(5, EXS62_ACK::srvType)) return 0;
+    if(exs62_getResponse(2, "OK")) return 0;
     
     sendCmd("AT^SISS=6,conId,\"1\"\r\n");
-    if(!exs62_getResponse(5, EXS62_ACK::conId)) return 0;
+    if(exs62_getResponse(2, "OK")) return 0;
 
     sendCmd("AT^SISS=6,\"address\",\"");
     sendCmd(pHttpAddr);
     sendCmd("\"\r\n");
-    if(!exs62_getResponse(5, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 0;
 
     sendCmd("AT^SISS=6,cmd,\"post\"\r\n");
-    if(!exs62_getResponse(5, EXS62_ACK::cmd)) return 0;
+    if(exs62_getResponse(2, "OK")) return 0;
 
     sendCmd("AT^SISS=6,\"hcProp\",\"Content-Type: application/json\\0d\\0aAccept: application/json\"\r\n");
-    if(!exs62_getResponse(5, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 0;
 
     return 1;
 }
@@ -55,17 +58,17 @@ int exs62_setHttp()
 int exs62_connectNetwork() {
   /* 設定電信商的APN, 才可連網 */
     sendCmd("AT+CGDCONT=1,\"IPV4V6\",\"internet.iot\"\r\n");
-    HAL_Delay(300);
+    if(exs62_getResponse(2, "OK")) return 0;
 
     sendCmd("AT+CGDCONT=2,\"IPV4V6\",\"nbiot\"\r\n");
-    HAL_Delay(300);
+    if(exs62_getResponse(2, "OK")) return 0;
 
     /* 設定掃頻(NBIOT掃BAND 8 28, CatM掃BAND 3)*/
     sendCmd("AT^SCFG=\"Radio/Band/CatNB\",\"8000080\",\"0\"\r\n");
-    HAL_Delay(300);
+    if(exs62_getResponse(2, "OK")) return 0;
 
     sendCmd("AT^SCFG=\"Radio/Band/CatM\",\"4\",\"0\"\r\n");
-    HAL_Delay(300);
+    if(exs62_getResponse(2, "OK")) return 0;
 
     /* 確認是否已註冊網路 */
     bool networkFlag = false;
@@ -78,26 +81,15 @@ int exs62_connectNetwork() {
       current = HAL_GetTick();
 
       sendCmd("AT+COPS?\r\n");
-      receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-      if (inputStringLpuart1.ready == 1)
-      {
-        inputStringLpuart1.ready = 0;
-        char *part = strstr(inputStringLpuart1.string, "+COPS: 0,0,");
-        if(part != NULL)
-        {
-          networkFlag = true;
-          break;
-        }
-
-        HAL_Delay(2000);
-      }
+      if(exs62_getResponse(1, "+COPS: 0,0,")) HAL_Delay(1000);
+      else {networkFlag = true; break;}
     }
     if(!networkFlag) return 0;
 
     /* Internet connection activate */
     HAL_Delay(1000);
     sendCmd("AT^SICA=1,1\r\n");
-    if(!exs62_getResponse(5, "OK")) return 0;
+    if(exs62_getResponse(5, "OK")) return 0;
 
     return 1;
 }
@@ -108,16 +100,17 @@ void sendCmd(char * str)
 }
 
 /*
-return 1 : OK
-       0 : Fail
+return 0 : OK
+       1 : Fail
 */
 int exs62_getResponse(int sec, char* target)
 {
     uint32_t start = HAL_GetTick();
     uint32_t current = HAL_GetTick();
     uint32_t timeout = sec * 1000;
+    bool isWorking = false;
 
-    while ((current - start) < timeout)
+    while ((current - start) <= timeout)
     {
         watchdog.reload();
         current = HAL_GetTick();
@@ -125,16 +118,30 @@ int exs62_getResponse(int sec, char* target)
         if (inputStringLpuart1.ready == 1)
         {
             inputStringLpuart1.ready = 0;
+            isWorking = true;
             char *part = strstr(inputStringLpuart1.string, target);
             if(part != NULL)
             {
-                return 1; //OK
+                return 0; //OK
+            }
+
+            part = strstr(inputStringLpuart1.string, "Remote host has reset the connection");
+            if(part != NULL)
+            {
+                return 2; // Disconnect
+            }
+
+            part = strstr(inputStringLpuart1.string, "+CME ERROR: operation failed");
+            if(part != NULL)
+            {
+                return 2; // Unknow error
             }
         }
     }
     
     /* Fail */
-    return 0;
+    if(isWorking) return 1;
+    else          return 3; // NO response
 }
 
 int exs62_preparePayload_Connect(uint32_t len) {
@@ -142,36 +149,35 @@ int exs62_preparePayload_Connect(uint32_t len) {
   char cmd[100] = {0};
   sprintf(cmd, "AT^SISS=6,\"hcContLen\",\"%lu\"\r\n", len);
   sendCmd(cmd);
-  if(!exs62_getResponse(2, "OK")) {
-    return 0;
-  }
+  if(exs62_getResponse(2, "OK")) return 1;
 
   // 開啟連線 + 寫資料 + 傳送
   sendCmd("AT^SISO=6\r\n");
-  if(!exs62_getResponse(5, "^SISW: 6,1")) {
-    return 0;
-  }
+  if(exs62_getResponse(10, "^SISW: 6,1")) return 1;
 
-  return 1;
+  return 0;
 }
 
 int exs62_closeConnetion() {
   sendCmd("AT^SISC=6\r\n");
-  if(!exs62_getResponse(2, "OK")) {
-    return 0;
-  }
+  if(exs62_getResponse(2, "OK")) return 1;
 
-  return 1;
+  return 0;
 }
 
 int exs62_http_send(char *payload, uint32_t payloadlen) {
   char cmd[100] = {0};
+  int result = 1;
+
   if(payloadlen <= 1500)
   {
     sprintf(cmd, "AT^SISW=6,%lu\r\n", payloadlen);
     sendCmd(cmd);
-    HAL_Delay(50);
-    sendCmd(payload);
+    result = dbg_exs62_getResponse(1, "^SISW: 6,");
+    if(result) {DEBUG("SEND ERROR 1\r\n"); return result;}
+    writeData(LPUART1, payload, payloadlen);
+    result = dbg_exs62_getResponse(2, "SISW: 6,");
+    if(result) {DEBUG("SEND ERROR 2\r\n"); return result;}
   }
   else
   {
@@ -180,31 +186,38 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
     uint32_t len = payloadlen;
     for(int i = 0; i < count; i++)
     {
-      HAL_Delay(50);
       sendCmd("AT^SISW=6,1500\r\n");
+      result = dbg_exs62_getResponse(1, "^SISW: 6,");
+      if(result) {DEBUG("SEND ERROR 1\r\n"); return result;}
       HAL_Delay(50);
       writeData(LPUART1, pData, 1500);
       pData += 1500;
       len -= 1500;
-
-      if(!exs62_getResponse(3, "SISW: 6,1")) return 0;
-      DEBUG("Send OK\r\n");
+      result = dbg_exs62_getResponse(2, "SISW: 6,");
+      if(result) {DEBUG("SEND ERROR 2\r\n"); return result;}
+      HAL_Delay(50);
     }
 
     HAL_Delay(50);
     sprintf(cmd, "AT^SISW=6,%lu\r\n", len);
     sendCmd(cmd);
+    result = dbg_exs62_getResponse(1, "^SISW: 6,");
+    if(result) {DEBUG("SEND ERROR 1\r\n"); return result;}
     HAL_Delay(50);
     writeData(LPUART1, pData, len);
-    DEBUG("Send Done\r\n");
+    HAL_Delay(50);
+    result = dbg_exs62_getResponse(1, "SISW: 6,");
+    if(result) {DEBUG("SEND ERROR 2\r\n"); return result;}
   }
 
-  return 1;
+  return 0;
 }
 
 void exs62_getRSSI(char * out) {
-  sendCmd((char*)"AT^SMONI\r\n");
-  if(exs62_getResponse(2, "^SMONI:")) {
+  HAL_Delay(50);
+  sendCmd("AT^SMONI\r\n");
+  HAL_Delay(50);
+  if(!exs62_getResponse(1, "^SMONI:")) {
     // RSRP於第12格
     char *str;
     strtok(inputStringLpuart1.string, ",");
@@ -222,7 +235,55 @@ void exs62_getRSSI(char * out) {
 
     memcpy(out, str, strnlen(str, 4));
   } else {
+    DEBUG("Fail to get RSSI\r\n");
     memset(out, 0, sizeof(out));
     out[0] = '0';
   }
+}
+
+int dbg_exs62_getResponse(int sec, const char* target)
+{
+    uint32_t start = HAL_GetTick();
+    uint32_t current = HAL_GetTick();
+    uint32_t timeout = sec * 1000;
+    static char tempStr[100] = {0};
+    bool isWorking = false;
+
+    while ((current - start) <= timeout)
+    {
+        watchdog.reload();
+        current = HAL_GetTick();
+        receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
+        if (inputStringLpuart1.ready == 1)
+        {
+            inputStringLpuart1.ready = 0;
+            isWorking = true;
+            char final[300]={0};
+            strcpy(final, tempStr);
+            strcat(final, inputStringLpuart1.string);
+            memset(tempStr, 0, sizeof(tempStr));
+            strcpy(tempStr, inputStringLpuart1.string);
+            char *part = strstr(final, target);
+            if(part != NULL)
+            {
+                return 0; //OK
+            }
+
+            part = strstr(inputStringLpuart1.string, "Remote host has reset the connection");
+            if(part != NULL)
+            {
+                return 2; // Disconnect
+            }
+
+            part = strstr(inputStringLpuart1.string, "+CME ERROR: operation failed");
+            if(part != NULL)
+            {
+                return 2; // Unknow error
+            }
+        }
+    }
+    
+    /* Fail */
+    if(isWorking) return 1;
+    else          return 3; // NO response
 }
