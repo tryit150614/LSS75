@@ -13,62 +13,66 @@ extern struct inputString inputStringLpuart1;
 extern Watchdog watchdog;
 extern char pHttpAddr[100];
 
-namespace EXS62_ACK{
-    char bootupStr[] = "\r\n^SYSSTART";
-    char srvType[]   = "AT^SISS=6,srvType,\"Http\"\r\r\nOK";
-    char conId[]     = "AT^SISS=6,conId,\"1\"\r\r\nOK";
-    char cmd[]       = "AT^SISS=6,cmd,\"post\"\r\r\nOK";
-    char header[]    = "";
-}
-
 int dbg_exs62_getResponse(int sec, const char* target);
-
 
 int exs62_ready()
 {
     /* Wait module ready */
-    if(exs62_getResponse(1, "^SYSSTART")) return 0;
+    if(exs62_getResponse(15, "SYSSTART")) return 0;
 
     return 1;
+}
+
+int exs62_switchOff()
+{
+  /*傳隨一指令, 防止遇到其他指令正在處理而使^SMSO失敗*/
+  sendCmd("AT\r\n");
+  exs62_getResponse(1, "OK");
+  
+  sendCmd("AT^SMSO\r\n");
+  if(exs62_getResponse(2, "OK")) return 1;
+
+  HAL_Delay(2000);
+  return 0;
 }
 
 int exs62_setHttp()
 {
     /* Http setting */
     sendCmd("AT^SISS=6,srvType,\"Http\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
     
     sendCmd("AT^SISS=6,conId,\"1\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     sendCmd("AT^SISS=6,\"address\",\"");
     sendCmd(pHttpAddr);
     sendCmd("\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     sendCmd("AT^SISS=6,cmd,\"post\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     sendCmd("AT^SISS=6,\"hcProp\",\"Content-Type: application/json\\0d\\0aAccept: application/json\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
-    return 1;
+    return 0;
 }
 
 int exs62_connectNetwork() {
   /* 設定電信商的APN, 才可連網 */
     sendCmd("AT+CGDCONT=1,\"IPV4V6\",\"internet.iot\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     sendCmd("AT+CGDCONT=2,\"IPV4V6\",\"nbiot\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     /* 設定掃頻(NBIOT掃BAND 8 28, CatM掃BAND 3)*/
     sendCmd("AT^SCFG=\"Radio/Band/CatNB\",\"8000080\",\"0\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     sendCmd("AT^SCFG=\"Radio/Band/CatM\",\"4\",\"0\"\r\n");
-    if(exs62_getResponse(2, "OK")) return 0;
+    if(exs62_getResponse(2, "OK")) return 1;
 
     /* 確認是否已註冊網路 */
     bool networkFlag = false;
@@ -84,14 +88,14 @@ int exs62_connectNetwork() {
       if(exs62_getResponse(1, "+COPS: 0,0,")) HAL_Delay(1000);
       else {networkFlag = true; break;}
     }
-    if(!networkFlag) return 0;
+    if(!networkFlag) return 1;
 
     /* Internet connection activate */
     HAL_Delay(1000);
     sendCmd("AT^SICA=1,1\r\n");
-    if(exs62_getResponse(5, "OK")) return 0;
+    if(exs62_getResponse(5, "OK")) return 1;
 
-    return 1;
+    return 0;
 }
 
 void sendCmd(char * str)
@@ -123,6 +127,12 @@ int exs62_getResponse(int sec, char* target)
             if(part != NULL)
             {
                 return 0; //OK
+            }
+
+            part = strstr(inputStringLpuart1.string, "422 Unprocessable Entity");
+            if(part != NULL)
+            {
+                return 422;
             }
 
             part = strstr(inputStringLpuart1.string, "Remote host has reset the connection");
@@ -214,10 +224,8 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
 }
 
 void exs62_getRSSI(char * out) {
-  HAL_Delay(50);
   sendCmd("AT^SMONI\r\n");
-  HAL_Delay(50);
-  if(!exs62_getResponse(1, "^SMONI:")) {
+  if(!exs62_getResponse(2, "^SMONI:")) {
     // RSRP於第12格
     char *str;
     strtok(inputStringLpuart1.string, ",");
@@ -267,6 +275,12 @@ int dbg_exs62_getResponse(int sec, const char* target)
             if(part != NULL)
             {
                 return 0; //OK
+            }
+
+            part = strstr(inputStringLpuart1.string, "422 Unprocessable Entity");
+            if(part != NULL)
+            {
+                return 422;
             }
 
             part = strstr(inputStringLpuart1.string, "Remote host has reset the connection");

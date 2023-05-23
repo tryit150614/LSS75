@@ -6,17 +6,6 @@
 typedef int (*funcptr)();
 typedef funcptr (*StateFunc)();
 
-#define ERROR_MSG_CGDCONT "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",\"\",\"0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0\",0,0,0,0"
-#define ERROR_MSG_CGDCONT_TEXT_NUM 79
-#define ERROR_MSG_USOCR "AT+USOCR=6\r\r\n+CME ERROR:"
-#define ERROR_MSG_USOCR_TEXT_NUM 24
-#define OK_MSG_CGDCONT "AT+CGDCONT?\r\r\n+CGDCONT: 1,\"IPV4V6\",\"internet.iot\","
-#define OK_MSG_CGDCONT_TEXT_NUM 50
-#define OK_MSG_USOCR    "AT+USOCR=6\r\r\n+USOCR:"
-#define OK_MSG_USOCR_TEXT_NUM 20
-#define OK_MSG_USOCO    "\r\nOK\r\n"
-#define OK_MSG_USOCO_TEXT_NUM 6
-
 struct FSMAttributes {
 
   StateFunc state;
@@ -48,5 +37,7 @@ funcptr nb_sendData();
 funcptr fsm_checkModule();
 funcptr catM_Connect_And_Send();
 funcptr catM_getResponse();
+
+void TaskADC(void * parameter);
 
 #endif /* FSM_H_ */

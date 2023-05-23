@@ -177,20 +177,33 @@ void clearAllDataInEEPROM() {
         nonData[i] = 0xFF;
     
     bool rtn = parSave(nonData, 0, MAX_EEPROM_SIZE);
-    if(rtn) writeString(DEBUG_USART, "Success to clear all data in EEPROM.\r\n");
+    if(rtn) {
+        writeString(DEBUG_USART, "Success to clear all data in EEPROM.\r\n");
+        changeSaveAddress(dataFirstAddress);
+        changeSendAddress(dataFirstAddress);
+    }
     else    writeString(DEBUG_USART, "Fail to clear all data in EEPROM.\r\n");
 }
 
 int eeprom_load_eepromFlag() {
     uint8_t temp[8+1] = {0};
-    bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)8);
+    bool loadResult = parLoad(temp, (uint16_t)0, (uint16_t)9);
     if(loadResult) {
-        eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
-        eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
-        return 1;
+      if(temp[8] == 1) { // Need to clear eeprom data
+        DEBUG("Clear eeprom...\r\n");
+        clearAllDataInEEPROM();
+        DEBUG("Done\r\n");
+
+        uint8_t zero[1] = {0};
+        parSave(zero, 8, 1);
+        parLoad(temp, (uint16_t)0, (uint16_t)9);
+      }
+      eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
+      eepromFlag.nextSendAddress = (uint16_t)((temp[4] + temp[5] + temp[6] + temp[7]) * payloadLen);
+      return 1;
     }
     else {
-        return 0;
+      return 0;
     }
 }
 

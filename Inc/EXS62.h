@@ -2,6 +2,7 @@
 #define _EXS_62
 
 int exs62_ready();
+int exs62_switchOff();
 int exs62_setHttp();
 int exs62_connectNetwork();
 int exs62_getResponse(int sec, char* target);

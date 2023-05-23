@@ -7,7 +7,7 @@
 #include "flashWrapper.h"
 #include "main.h"
 
-struct ResendStruct flashResend = {(uint64_t)600};
+struct ResendStruct flashResend = {(uint64_t)300};
 struct MACStruct flashMAC = {9};
 struct HashStruct flashHASH = {"FDlpdx5y"};
 struct FlashFlagStruct flashFlag = {0};

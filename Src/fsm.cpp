@@ -44,6 +44,7 @@ extern char pHash[9];
 extern volatile bool rs485Flag;
 extern volatile bool moduleFlag;
 extern volatile bool sendOKFlag;
+extern bool adc_Flag;
 
 extern EEPROMFlag eepromFlag;
 extern Rtc rtc;
@@ -96,6 +97,7 @@ void fsm_init()
 
 funcptr fsm_idle()
 {
+  powerOnRS485IC();
   /* Enable Module's power */
   NBIOT_PowerOn();
 
@@ -105,63 +107,7 @@ funcptr fsm_idle()
 funcptr fsm_getADCValue()
 {
   // DEBUG(">>fsm_getADCValue<<\r\n");
-  
-    uint16_t rawData [4][3] = {0};
-    float    tempVolt[3]    = {0};           // BAT, Solar, InnerTemp
-    float    fixValue[3]    = {9.633, 9.7, 1};
-    
-    for(uint8_t i = 0; i < 3; i++)
-    {   
-        ADC_startConversion();
-        while(LL_DMA_IsActiveFlag_TC1(DMA1) == 0);
-        LL_DMA_ClearFlag_TC1(DMA1);
 
-        rawData[0][i] = adc1DmaBuffer[0];
-        rawData[1][i] = adc1DmaBuffer[1];
-        rawData[2][i] = adc1DmaBuffer[2];
-        /* voltage reference */
-        rawData[3][i] = adc1DmaBuffer[3];
-    }
-
-    /* Calculate the voltage reference */
-    float base = 0;
-    for (uint8_t i = 0; i < 3; i++) {
-        base += (float) rawData[3][i];
-    }
-    base /= 3;
-    base = (VREFINT_CAL_VREF / 1000) * ((float) *VREFINT_CAL_ADDR / base);
-
-    /* Calculate t1 ~ t3 */
-    float avg;
-    for (uint8_t i = 0; i < 3; i++) {
-        avg = 0;
-        for (uint8_t j = 0; j < 3; j++) {
-            avg += (float) rawData[i][j];
-        }
-        avg /= 3;
-
-        tempVolt[i] = base * (avg / 4095) * fixValue[i];
-    }
-
-    memset(batV, 0, sizeof(batV));
-    memset(solarV, 0, sizeof(solarV));
-    memset(innerT, 0, sizeof(innerT));
-    //-----------  Votagle  ---------//
-    floatToString(tempVolt[0], batV, 10);
-    floatToString(tempVolt[1], solarV, 10);
-    //-----------Temperature---------//
-    voltToTemperature(tempVolt[2], innerT);
-
-    /* Direct battery voltage, if < 2.8V, just sleep. */
-    writeString(DEBUG_USART,"BatteryV : ");DEBUG(batV);writeString(DEBUG_USART,"\r\n");
-    if (tempVolt[0] < 2.900000 && tempVolt[0] >= 0.00000)
-    {
-
-      writeString(DEBUG_USART,"Keep sleep ...\r\n");
-      return (funcptr)fsm_sleep;
-    }
-
-    tempTimestamp = getUnixTimestamp();
 
   return (funcptr)fsm_getRS485Data;
 }
@@ -490,7 +436,6 @@ funcptr fsm_getRS485Data()
   return (funcptr)fsm_checkModule;
 }
 
-
 funcptr fsm_checkModule()
 {
   static bool reInitFlag = false;
@@ -499,7 +444,7 @@ funcptr fsm_checkModule()
     isCatM = true;
     moduleFlag = true;
 
-    if(exs62_setHttp()) {
+    if(!exs62_setHttp()) {
       DEBUG("CatM setting OK\r\n");
     }
     else {
@@ -542,7 +487,7 @@ funcptr nb_waitIP() {
   static uint32_t waitIPCount = 0;
   if(isCatM)
   {
-   if(exs62_connectNetwork()) {
+   if(!exs62_connectNetwork()) {
       noConnectFlag = false;
     } else {
       DEBUG("Connect network fail\r\n");
@@ -834,31 +779,39 @@ funcptr catM_getResponse() {
   char msg[800 + 1] = {0};
   int len = 0;
 
-  /* 這裡需要出分出200、422和其他 */
-  /* If http status is 422 */
-  // if(!exs62_getResponse(3, "HTTP/1.1 422")) {
-  //   DEBUG("Result : FAIL!State 422.\r\n");
-    
-  //   /* 關閉連線 */
-  //   if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
-  //   else                        DEBUG("Close connection OK\r\n");
-
-  //   eeprom_ClearData();
-
-  //   return (funcptr)fsm_sleep;
-  // }
-
   /* If http state is 200 or other */
-  if(exs62_getResponse(5, "^SISR: 6,1")) { /* Not 200 */
+  int result = exs62_getResponse(5, "^SISR: 6,1");
+  if(result) { /* Not 200 */
     DEBUG("Result : Fail!\r\n");
-
-    DEBUG("*-*-*-*-*-*-*-*-*-*-*\r\n");
-    DEBUG(inputStringLpuart1.string);
-    DEBUG("\r\n*-*-*-*-*-*-*-*-*-*-*\r\n");
 
     /* 關閉連線 */
     if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
     else                        DEBUG("Close connection OK\r\n");
+
+    /* 連續422則清空EEPROM */
+    uint8_t checkEEPROM[2] = {0}; // 位置8為清空eepromFlag, 位置9為紀錄422次數
+    parLoad(checkEEPROM, 9, 1);
+    if     (result != 422 && checkEEPROM[1] >= 1) {
+      /*清空422計算, 連續才繼續加*/
+      checkEEPROM[0] = 0;
+      parSave(checkEEPROM, 9, 1);
+    }
+    else if(result == 422 && checkEEPROM[0] == 0) {
+      checkEEPROM[0] = 1;
+      parSave(checkEEPROM, 9, 1);
+      DEBUG("Count_422_num = 1\r\n");
+    }
+    else if(result == 422 && checkEEPROM[0] >= 1) {
+      DEBUG("Get 422 Unprocessable Entity >= 2, reset m4 and clear eeprom\r\n");
+      checkEEPROM[0] = 1;
+      checkEEPROM[1] = 0;
+      parSave(checkEEPROM, 8, 2);
+      /* 關閉EXS62 */
+      if(!exs62_switchOff()) DEBUG("Successful to power off EXS62\r\n");
+      NBIOT_PowerOff();
+      vTaskDelay(pdMS_TO_TICKS(100));
+      NVIC_SystemReset();
+    }
 
     //儲存最新一筆資料
     DEBUG("Save in eeprom.\r\n");
@@ -968,11 +921,86 @@ funcptr fsm_sleep() {
   if(!isCatM) {
     sara_poweroff();
   }
+  else {
+    /* 關閉EXS62 */
+    if(!exs62_switchOff()) DEBUG("Successful to power off EXS62\r\n");
+  }
 
   DEBUG("Sleep time : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
   HAL_PWREx_EnterSHUTDOWNMode();
   return 0;
 }
+
+// ------------------ Other task ----------------------------------
+void TaskADC(void * parameter) {
+  for(;;) {
+    uint16_t count = 50;
+    uint16_t rawData [4][count] = {0};
+    float    tempVolt[3]    = {0};           // BAT, Solar, InnerTemp
+    float    fixValue[3]    = {9.633, 9.7, 1};
+    
+    for(uint8_t i = 0; i < count; i++)
+    {   
+        ADC_startConversion();
+        while(LL_DMA_IsActiveFlag_TC1(DMA1) == 0);
+        LL_DMA_ClearFlag_TC1(DMA1);
+
+        rawData[0][i] = adc1DmaBuffer[0];
+        rawData[1][i] = adc1DmaBuffer[1];
+        rawData[2][i] = adc1DmaBuffer[2];
+        /* voltage reference */
+        rawData[3][i] = adc1DmaBuffer[3];
+    }
+
+    /* Calculate the voltage reference */
+    float base = 0;
+    for (uint8_t i = 0; i < count; i++) {
+        base += (float) rawData[3][i];
+    }
+    base /= count;
+    base = (VREFINT_CAL_VREF / 1000) * ((float) *VREFINT_CAL_ADDR / base);
+
+    /* Calculate t1 ~ t3 */
+    float avg;
+    for (uint8_t i = 0; i < 3; i++) {
+        avg = 0;
+        for (uint8_t j = 0; j < count; j++) {
+            avg += (float) rawData[i][j];
+        }
+        avg /= count;
+
+        tempVolt[i] = base * (avg / 4095) * fixValue[i];
+    }
+
+    memset(batV, 0, sizeof(batV));
+    memset(solarV, 0, sizeof(solarV));
+    memset(innerT, 0, sizeof(innerT));
+    //-----------  Votagle  ---------//
+    floatToString(tempVolt[0], batV, 10);
+    floatToString(tempVolt[1], solarV, 10);
+    //-----------Temperature---------//
+    voltToTemperature(tempVolt[2], innerT);
+
+    /* Direct battery voltage, if < 2.8V, just sleep. */
+    writeString(DEBUG_USART,"BatteryV : ");DEBUG(batV);writeString(DEBUG_USART,"\r\n");
+    if (tempVolt[0] < 2.900000 && tempVolt[0] >= 0.00000)
+    {
+
+      writeString(DEBUG_USART,"Keep sleep ...\r\n");
+      HAL_PWREx_EnterSHUTDOWNMode();
+    }
+
+    tempTimestamp = getUnixTimestamp();
+    adc_Flag = true;
+
+    DEBUG("batV   = ");DEBUG(batV);DEBUG("\r\n");
+    DEBUG("solarV = ");DEBUG(solarV);DEBUG("\r\n");
+    DEBUG("innerT = ");DEBUG(innerT);DEBUG("\r\n");
+
+    vTaskDelay(pdMS_TO_TICKS(100000000000));
+  }
+}
+
 
 //-------------------private function------------------------------
 static void voltToTemperature(float tempVolt, char * tempStr)

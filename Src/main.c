@@ -56,6 +56,8 @@ volatile uint32_t pMAC = 0;
 char pHash[9] = {0};
 char pHttpAddr[100] = "http://yummy.agriweather.online/api/6th-nbiot";
 
+bool reset_Flag = false;
+bool adc_Flag   = false;
 /* LED flag */
 volatile bool rs485Flag    = false;
 volatile bool moduleFlag   = false;
@@ -65,6 +67,7 @@ volatile bool sendOKFlag   = false;
 /* Private variables ---------------------------------------------------------*/
 extern Watchdog watchdog;
 extern Rtc      rtc;
+extern EEPROMFlag eepromFlag;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -105,7 +108,6 @@ int main(void)
   ringBuffer_new(&usart2Buf, usart2Data, usart2DataSize);
   ringBuffer_new(&usart3Buf, usart3Data, usart3DataSize);
 
-  powerOnRS485IC();
   EEPROM_EnableProtect();
 
   MX_ADC1_Init();
@@ -116,6 +118,12 @@ int main(void)
   xReturned = xTaskCreate(TaskSystem, "taskSystem", 128, NULL, 1, NULL);
   if(xReturned != pdPASS) {
     writeString(DEBUG_USART, "Could not create task taskSystem.");
+    while (1);
+  }
+
+  xReturned = xTaskCreate(TaskADC, "taskADC", 128 * 3, NULL, 1, NULL);
+  if(xReturned != pdPASS) {
+    writeString(DEBUG_USART, "Could not create task taskFSM.");
     while (1);
   }
 
@@ -143,13 +151,10 @@ int main(void)
     Lora_Send_Toggle();
     Lora_Receive_Toggle();
     powerLED_Toggle();
-
     clearAllDataInEEPROM();
     Lora_Send_Toggle();
     Lora_Receive_Toggle();
     powerLED_Toggle();
-    changeSaveAddress(dataFirstAddress);
-    changeSendAddress(dataFirstAddress);
     nodeManager_initFlashData();
   }
 
@@ -164,7 +169,10 @@ int main(void)
   DEBUG("MAC : ");writeUint32(DEBUG_USART, pMAC);DEBUG("\r\n");
   DEBUG("Hash : ");DEBUG(pHash);DEBUG("\r\n");
   DEBUG("ResendTime : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
-  DEBUG("FD Version 1.4.6 2023/03/20\r\n");
+  DEBUG("Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);DEBUG("\r\n");
+  DEBUG("Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);DEBUG("\r\n");
+
+  DEBUG("FD Version 1.4.7 2023/05/16\r\n");
   DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */
@@ -259,15 +267,16 @@ void MX_GPIO_Init(void)
 void TaskSystem(void * parameter) {
   for(;;) {
     watchdog.reload();
-    LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
-    vTaskDelay(pdMS_TO_TICKS(5));
-    LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
+    // vTaskDelay(pdMS_TO_TICKS(5));
+    // LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
+    // LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
     vTaskDelay(pdMS_TO_TICKS(995));
   }
 }
 
 void TaskFSM(void *pvParameters) {
   for (;;) {
+      if(!adc_Flag) vTaskDelay(pdMS_TO_TICKS(100));
       fsmAttributes.state = (StateFunc)(*fsmAttributes.state)();
   }
 }
@@ -306,16 +315,18 @@ sendOKFlag : 亮Receive and Send燈, 亮1秒
 */
 void TaskLED(void *pvParameters) {
   for(;;) {
-    LL_GPIO_SetOutputPin(pPowerLED, ioPowerLED);
-    if(rs485Flag || sendOKFlag)   LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-    if(moduleFlag)  LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
+    if(adc_Flag) {
+      LL_GPIO_SetOutputPin(pPowerLED, ioPowerLED);
+      if(rs485Flag || sendOKFlag)   LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
+      if(moduleFlag)  LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
 
-    if(sendOKFlag)  {vTaskDelay(pdMS_TO_TICKS(1000)); sendOKFlag = false;}
-    else            vTaskDelay(pdMS_TO_TICKS(10));
+      if(sendOKFlag)  {vTaskDelay(pdMS_TO_TICKS(1000)); sendOKFlag = false;}
+      else            vTaskDelay(pdMS_TO_TICKS(10));
 
-    LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
-    LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
-    LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
+      LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
+      LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
+      LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
+    }
 
     vTaskDelay(pdMS_TO_TICKS(990));
   }
