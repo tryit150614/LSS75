@@ -14,8 +14,8 @@
 #include "st_rtc.h"
 #include "st_watchdog.h"
 #include "rs485_list.h"
-#include "SARA-R410M.h"
 #include "EXS62.h"
+#include "gpio.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -23,7 +23,6 @@
 #include "FreeRTOSConfig.h"
 
 #include "stm32l4xx_hal_pwr.h"
-
 
 extern struct inputString inputStringUsart2;
 extern volatile ringBufferStruct usart2Buf;
@@ -34,22 +33,24 @@ extern const unsigned int usart3DataSize = 200;
 
 extern struct inputString inputStringLpuart1;
 extern volatile ringBufferStruct lpuart1Buf;
-extern int lpuart1DataLength;
+extern int unsigned lpuart1DataLength;
 
-extern uint16_t adc1DmaBuffer[DMA1_ADC_BUFFER_SIZE];
 extern volatile uint32_t pResendTime;
 extern volatile uint32_t pMAC;
 extern char pHash[9];
 
-extern volatile bool rs485Flag;
-extern volatile bool moduleFlag;
-extern volatile bool sendOKFlag;
+extern volatile bool LED_RS485_Flag;
+extern volatile bool LED_Module_Flag;
+extern volatile bool LED_SendOK_Flag;
 extern bool adc_Flag;
 
 extern EEPROMFlag eepromFlag;
+extern Watchdog watchdog;
 extern Rtc rtc;
 
-/* Payload */
+extern char batV[10], solarV[10], innerT[10];
+
+/* Parameter from RS485 */
 static char     soilTemp[20]      = "0.0";
 static char     soilVWC [20]      = "0";
 static char     soilEC  [20]      = "0.0";
@@ -63,33 +64,36 @@ static char     windSpeed [10]    = "0.0";
 static char     leafH  [10]       = "0.0";
 static char     leafT  [10]       = "0.0";
 static char     dewPoint[10]      = "0.0";
+
 static char     newData[256+1]         = {0};
 static char     readySendData[10500+1] = {0};
 static uint32_t amountOfData     = 0;
-static uint32_t tempTimestamp    = 0;
 
 char RSSI[5] = {0};
 
 struct FSMAttributes fsmAttributes;
-Watchdog dog;
 
 static uint8_t nonData[payloadLen + 1]   = {0};
-static char batV[10] = {0}, solarV[10]   = {0}, innerT[10] = {0};
 static bool noConnectFlag = false;
-
-static bool isCatM = false;
 // Declare private functions---------
-static void voltToTemperature(float tempVolt, char * tempStr);
-static void floatToString(float value, char * str, int dot);
 static void transmitRS485(uint8_t * deviceNumber);
 static void getRS485Data(char * deviceData, int receiveDataLen);
 static void eeprom_ClearData();
 //-----------------------------------
 
+void TaskFSM(void *pvParameters) {
+  for (;;) {
+      if(!adc_Flag) vTaskDelay(pdMS_TO_TICKS(100));
+      fsmAttributes.state = (StateFunc)(*fsmAttributes.state)();
+  }
+}
+
 void fsm_init()
 {
   fsmAttributes.state = fsm_idle;
-  memset(fsmAttributes.payloadOut, 0, sizeof(fsmAttributes.payloadOut));
+  memset(RSSI, 0, sizeof(RSSI));
+  memset(newData, 0, sizeof(newData));
+  memset(readySendData, 0, sizeof(readySendData));
 
   for(int i = 0; i < payloadLen; i++)
     nonData[i] = 0xFF;
@@ -98,16 +102,7 @@ void fsm_init()
 funcptr fsm_idle()
 {
   powerOnRS485IC();
-  /* Enable Module's power */
-  NBIOT_PowerOn();
-
-  return (funcptr)fsm_getADCValue;
-}
-
-funcptr fsm_getADCValue()
-{
-  // DEBUG(">>fsm_getADCValue<<\r\n");
-
+  M1_PowerOn();
 
   return (funcptr)fsm_getRS485Data;
 }
@@ -167,7 +162,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Soil senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Soil sensor data : ");DEBUG(rs485Data_Soil);DEBUG("\r\n");
 
     char tempStr[20]  = {0};
@@ -200,7 +195,7 @@ funcptr fsm_getRS485Data()
     DEBUG("PH senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("PH sensor data : ");DEBUG(rs485Data_PH);DEBUG("\r\n");
 
     /* PH */
@@ -216,7 +211,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Air senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Air sensor data : ");DEBUG(rs485Data_Air);DEBUG("\r\n");
 
     /* Air temp */
@@ -229,7 +224,7 @@ funcptr fsm_getRS485Data()
       sprintf(airT, "%u.%02u", tempAT / 100, tempAT % 100);
     }
     else {
-      sprintf(airT, "%lu.%02lu", (65536 - tempAT) / 100, (65536 - tempAT) % 100);
+      sprintf(airT, "%u.%02u", (65536 - tempAT) / 100, (65536 - tempAT) % 100);
     }
 
     /* Air H */
@@ -238,7 +233,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempAirHStr, rs485Data_Air + 10, 4);
     tempAH = (uint16_t)strtol(tempAirHStr, NULL, 16); // 3000 (30.00%)
-    sprintf(airH, "%lu.%02lu", tempAH / 100, tempAH % 100);
+    sprintf(airH, "%u.%02u", tempAH / 100, tempAH % 100);
 
     /* DewPoint */
     float _hu = tempAH/10 + (float)(tempAH%10)/10.0;
@@ -254,7 +249,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Wind speed senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Wind speed sensor data : ");DEBUG(rawData_WS);DEBUG("\r\n");
 
     char tempWSStr[20] = {0};
@@ -271,7 +266,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Soil_2 senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Soil_2 sensor data : ");DEBUG(rs485Data_Soil_2);DEBUG("\r\n");
 
     /* Soil temp */
@@ -310,7 +305,7 @@ funcptr fsm_getRS485Data()
     DEBUG("PH_2 senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("PH_2 sensor data : ");DEBUG(rs485Data_PH_2);DEBUG("\r\n");
 
     /* PH */
@@ -319,7 +314,7 @@ funcptr fsm_getRS485Data()
 
     memcpy(tempSoilPH, rs485Data_PH_2 + 6, 4);
     tempPH = (uint16_t)strtol(tempSoilPH, NULL, 16);
-    sprintf(soilPH, "%lu.%02lu", tempPH / 100, tempPH % 100);
+    sprintf(soilPH, "%u.%02u", tempPH / 100, tempPH % 100);
   }
 
   /* SolraPAR */
@@ -327,7 +322,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Solra PAR senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Solra PAR sensor data : ");DEBUG(rawData_Solar);DEBUG("\r\n");
 
     char tempStr[20] = {0};
@@ -343,7 +338,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Water depth senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("water depth sensor data : ");DEBUG(rawData_Waterdepth);DEBUG("\r\n");
 
     char tempStr[20] = {0};
@@ -359,7 +354,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Sun Radiation senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Sun Radiation sensor data : ");DEBUG(rawData_SR);DEBUG("\r\n");
 
     char tempStr[20] = {0};
@@ -375,7 +370,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Wind speed senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Wind speed sensor 2 data : ");DEBUG(rawData_WS_2);DEBUG("\r\n");
 
     char tempStr[20] = {0};
@@ -391,7 +386,7 @@ funcptr fsm_getRS485Data()
     DEBUG("Leaf T&H senser : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("Leaf T&H sensor data : ");DEBUG(rawData_Leaf);DEBUG("\r\n");
 
     /* Leaf temp */
@@ -401,10 +396,10 @@ funcptr fsm_getRS485Data()
     memcpy(tempLeafT, rawData_Leaf + 6, 4);
     tempLT = (uint16_t)strtol(tempLeafT, NULL, 16);
     if(tempLT <= 8000) { 
-      sprintf(leafT, "%lu.%02lu", tempLT / 100, tempLT % 100);
+      sprintf(leafT, "%u.%02u", tempLT / 100, tempLT % 100);
     }
     else {
-      sprintf(leafT, "-%lu.%02lu", (65536 - tempLT + 1) / 10, (65536 - tempLT + 1) % 10 * 10);
+      sprintf(leafT, "-%u.%02u", (65536 - tempLT + 1) / 10, (65536 - tempLT + 1) % 10 * 10);
     }
 
     /* Leaf H */
@@ -421,7 +416,7 @@ funcptr fsm_getRS485Data()
     DEBUG("New water depth sensor : N/A\r\n");
   }
   else {
-    rs485Flag = true;
+    LED_RS485_Flag = true;
     DEBUG("New water depth sensor : ");DEBUG(rawData_Waterdepth_2);DEBUG("\r\n");
 
     char tempStr[20] = {0};
@@ -433,116 +428,57 @@ funcptr fsm_getRS485Data()
   }
 
   DEBUG("----------------------------------\r\n");
-  return (funcptr)fsm_checkModule;
+  return (funcptr)fsm_initModule;
 }
 
-funcptr fsm_checkModule()
+funcptr fsm_initModule()
 {
   static bool reInitFlag = false;
-  if(exs62_ready()) {
-    DEBUG(">> CatM module <<\r\n");
-    isCatM = true;
-    moduleFlag = true;
 
-    if(!exs62_setHttp()) {
-      DEBUG("CatM setting OK\r\n");
-    }
-    else {
-      DEBUG("CatM setting Fail\r\n");
-      moduleFlag = false;
-      if(!reInitFlag) {
-        reInitFlag = true;
-        NBIOT_PowerOff();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        NBIOT_PowerOn();
-        vTaskDelay(pdMS_TO_TICKS(10000));
-        return (funcptr)fsm_checkModule;
-      }
-    }
-  }
-  else {
-    DEBUG(">> nblox module <<\r\n");
-    sara_ready();
-
-    if(sara_setHttp()) {
-      DEBUG("nblox setting OK\r\n");
-      moduleFlag = true;
-    }
-    else {
-      moduleFlag = false;
-      DEBUG("nblox setting Fail\r\n");
-      if(!reInitFlag) {
-        reInitFlag = true;
-        NBIOT_PowerOff();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        return (funcptr)fsm_checkModule;
-      }
-    }
-  }
-
-  return (funcptr)nb_waitIP;
-}
-
-funcptr nb_waitIP() {
-  static uint32_t waitIPCount = 0;
-  if(isCatM)
-  {
-   if(!exs62_connectNetwork()) {
-      noConnectFlag = false;
-    } else {
-      DEBUG("Connect network fail\r\n");
-      noConnectFlag = true;
-    }
-
-    return (funcptr)nb_getSignalPower;
-  }
-  else
-  {
-    DEBUG("(UART) AT+CGDCONT?\r\n");
-    if(sara_checkIP()) {
-      waitIPCount = 0;
-      return (funcptr)nb_getSignalPower;
-    }
-    else {
-      waitIPCount++;
+  M1_PowerOn();
+  /* 等待開機訊息 */
+  if(exs62_ready()) DEBUG("Fail to start EXS62\r\n");
+  /* 初始化HTTP參數 */
+  if(exs62_setHttp()) {
+    DEBUG("EXS62 setting Fail\r\n");
+    LED_Module_Flag = false;
+    if(!reInitFlag) {
+      reInitFlag = true;
+      M1_PowerOff();
       vTaskDelay(pdMS_TO_TICKS(1000));
-      if(waitIPCount >= 300) {
-        waitIPCount = 0;
-        noConnectFlag = true;
-        DEBUG("Doesn't get IP.\r\n");     
-        return (funcptr)nb_getSignalPower;
-      }
+      return (funcptr)fsm_initModule;
     }
   }
 
-  return (funcptr)nb_waitIP;
-}
-
-funcptr nb_getSignalPower() {
-  char msg[100] = {0};
-  memset(RSSI, 0, sizeof(RSSI));
-
-  if(noConnectFlag) {
+  LED_Module_Flag = true;
+  /*  等待撥接到網路 */
+  if(!exs62_connectNetwork()) noConnectFlag = false;
+  else {                      noConnectFlag = true;
     RSSI[0] = '0';
-    DEBUG("Module no network, rssi = 0\r\n");
-    return (funcptr)nb_writeNewDataInBuffer;
+    DEBUG("Connect network fail\r\n");
+    return (funcptr)fsm_prepareNewPayload;
   }
 
-  vTaskDelay(pdMS_TO_TICKS(100));
-  /* Get power */
-  if(!isCatM) { // Ublox
-    DEBUG("(UART) AT+CESQ\r\n");
-    sara_getRSSI(RSSI);
-  }else { // Cat M
-    exs62_getRSSI(RSSI);
-  }
-
-  DEBUG("RSSI = ");DEBUG(RSSI);DEBUG("\r\n");
-
-  return (funcptr)nb_writeNewDataInBuffer;
+  return (funcptr)fsm_getRSSI;
 }
 
-funcptr nb_writeNewDataInBuffer() {
+funcptr fsm_getRSSI() {
+  static int getRSSI_count = 0;
+  memset(RSSI, 0, sizeof(RSSI));
+  if(exs62_getRSSI(RSSI)) {
+    getRSSI_count++;
+    if(getRSSI_count >= 3) {
+      RSSI[0] = '0';
+    }
+    else return (funcptr)fsm_getRSSI;
+  }
+
+  getRSSI_count = 0;
+  DEBUG("RSSI = ");DEBUG(RSSI);DEBUG("\r\n");
+  return (funcptr)fsm_prepareNewPayload;
+}
+
+funcptr fsm_prepareNewPayload() {
   sprintf(newData, "{\"device_id\":%lu,\"hash\":\"%s\",\"data\":{\"st\":%s,\"sm\":%s,\"sec\":%s,\"sph\":%s,\"at\":%s,\"ah\":%s,\"dp\":%s,\"spar\":%s,\"wdep\":%s,\"sr\":%s,\"ws\":%s,\"lt\":%s,\"lh\":%s,\"it\":%s,\"sv\":%s,\"volt\":%s,\"rssi\":%s,\"snr\":%s},\"gts\":%lu}",
             pMAC,
             pHash,
@@ -564,7 +500,7 @@ funcptr nb_writeNewDataInBuffer() {
             batV,
             RSSI,
             "0",         // SNR
-            tempTimestamp);
+            getUnixTimestamp());
   
   strcat(readySendData, newData);
   amountOfData = 1;
@@ -578,43 +514,38 @@ funcptr nb_writeNewDataInBuffer() {
     return (funcptr)fsm_sleep;
   }
 
-  return (funcptr)nb_checkEEPROM;
+  return (funcptr)fsm_checkEEPROM;
 }
 
 static uint32_t dataPos = 1;
-funcptr nb_checkEEPROM() {
-  // Check eeprom have data or not
+funcptr fsm_checkEEPROM() {
   uint8_t eepromData[payloadLen + 1] = {0};
   uint32_t addr = eepromFlag.nextSendAddress + (dataPos - 1) * payloadLen;
-  if(addr >= MAX_EEPROM_SIZE) {
-    DEBUG("Over max size, eeprom addr turn to 384.\r\n");
-    addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
-  }
+  if(addr >= MAX_EEPROM_SIZE) addr = dataFirstAddress;
+
   bool sts = parLoad(eepromData, addr, payloadLen);
   DEBUG(">>NextSendPos : ");writeUint32(DEBUG_USART, addr);DEBUG("\r\n");
 
-
   if(!sts || eepromData[0] == 0xFF || amountOfData >= 20) {
     DEBUG("End, Amount of data : ");writeUint32(DEBUG_USART, amountOfData);DEBUG("\r\n");
-    return (funcptr)nb_writeDataInNBIOT;
+    return (funcptr)fsm_sendData;
   }
   else if(strnlen((char *)eepromData, payloadLen) <= 150) {
     DEBUG("This data have problem, jump it.\r\n");
     dataPos++;
-    return (funcptr)nb_checkEEPROM;
+    return (funcptr)fsm_checkEEPROM;
   }
   else {
-      DEBUG("Get data in eeprom.\r\n");
-      strcat(readySendData, ",");
-      strcat(readySendData, (char *)eepromData);
-      amountOfData++;
-      dataPos++;
-
-      return (funcptr)nb_checkEEPROM;
+    DEBUG("Get data in eeprom.\r\n");
+    strcat(readySendData, ",");
+    strcat(readySendData, (char *)eepromData);
+    amountOfData++;
+    dataPos++;
+    return (funcptr)fsm_checkEEPROM;
   }
 }
 
-funcptr nb_writeDataInNBIOT() {
+funcptr fsm_sendData() {
 
   char tempArray[12000] = {0};
   int len = sprintf(tempArray, "{\"num\":%lu,\"records\":[%s]}",
@@ -622,163 +553,13 @@ funcptr nb_writeDataInNBIOT() {
             readySendData
             );
 
-  if(!isCatM) {
-    if(sara_writeInFileSystem(tempArray, len)) DEBUG("Write in filesystem OK\r\n");
-    else                                       DEBUG("Fail to write data in filesystem\r\n");
-  } else {
-    if(exs62_preparePayload_Connect(len)) DEBUG("exs62_preparePayload_Connect fail\r\n");
-    if(exs62_http_send(tempArray, len))   DEBUG("exs62_http_send fail\r\n");
-    return (funcptr)catM_getResponse;
-  }
-
-  return (funcptr)nb_sendData;
-}
-
-funcptr nb_sendData() {
-  int result = sara_http_send();
-  if(result == 0) { // Success
-    DEBUG("Send is OK\r\n");
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    return (funcptr)nb_getResponse;
-  }
-  else if(result == 1) { // 422
-    DEBUG("Get 422 status\r\n");
-    eeprom_ClearData();
-  }
-  else { // unknow error
-    DEBUG("Save in eeprom.\r\n");
-    eeprom_saveData_and_jumpNextPos((uint8_t*)newData);
-    return (funcptr)fsm_sleep;
-  }
-
-  return (funcptr)fsm_sleep;
-}
-
-funcptr nb_getResponse() 
-{
-  char msg[800 + 1] = {0};
-  int len = 0;
-  lpuart1DataLength = 0;
-
-  /* 讀取一部份, 判斷是否為200 */
-  DEBUG("(UART) AT+URDBLOCK=\"rp1\",0,40\r\n");
-  writeString(LPUART1, "AT+URDBLOCK=\"rp1\",0,40\r\n");
+  if(exs62_preparePayload_Connect(len)) DEBUG("exs62_preparePayload_Connect fail\r\n");
   vTaskDelay(pdMS_TO_TICKS(100));
-  len = lpuart1DataLength;
-  receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-  if (inputStringLpuart1.ready == 1) {
-    inputStringLpuart1.ready = 0;
-  }
-
-  char *partMsg  = strstr(inputStringLpuart1.string, "200");
-  if(partMsg == NULL) { // Not 200 or 422
-    DEBUG("Result : FAIL!\r\n");
-
-    DEBUG("This data store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
-    DEBUG("\r\n");
-    parSave((uint8_t*)newData, eepromFlag.nextSaveAddress, payloadLen);
-    changeSaveAddress(eepromFlag.nextSaveAddress + payloadLen);
-    DEBUG("Next store at : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);
-    DEBUG("\r\n");
-    return (funcptr)fsm_sleep;
-  }
-
-  memset(msg, 0, sizeof(msg));
-  DEBUG("(UART) AT+URDFILE=\"rp1\"\r\n");
-  writeString(LPUART1, "AT+URDFILE=\"rp1\"\r\n");
-  vTaskDelay(pdMS_TO_TICKS(3000));
-  len = lpuart1DataLength;
-  receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-  if (inputStringLpuart1.ready == 1) {
-    inputStringLpuart1.ready = 0;
-    memcpy(msg, inputStringLpuart1.string, len);
-  }
-
-  DEBUG("=============== MSG ===================\r\n");
-  writeData(DEBUG_USART, msg, len);
-  DEBUG("=============== === ===================\r\n");
-
-  char *str = strstr(msg, "\"ack\":");
-  if(str != NULL && len < 1000) { /* Get success response */
-    DEBUG(" Get success ACK\r\n");
-    sendOKFlag = true;
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    eeprom_ClearData();
-
-    /* TODO : Get resendTime and rtc time */
-    uint32_t startPos = str - msg;
-    char resendTime[10] = {0};
-    char timestemp[15] = {0};
-
-    int i = 0;
-    while((msg[startPos + 7 + i] != '|') && i < 10)
-    {
-      resendTime[i] = msg[startPos + 7 + i];
-      i++;
-    }
-    /* Now pos is '|' */
-    memcpy(timestemp, msg + startPos + 7 + i + 1, 12);
-    DEBUG("New ResendTime : ");DEBUG(resendTime);DEBUG(", time : ");DEBUG(timestemp);DEBUG("\r\n");
-
-    /* Resend time */
-    uint32_t getResendTime = (uint32_t)strtol(resendTime, NULL, 10);
-    if(getResendTime != pResendTime && getResendTime > 60) {
-      DEBUG("Change RT from ");writeUint32(DEBUG_USART, pResendTime);
-      DEBUG(" to ");writeUint32(DEBUG_USART, getResendTime);
-      DEBUG("\r\n");
-      nodeManager_changeResendTime((uint64_t)getResendTime);
-      DEBUG("Now RT = ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
-    }
-
-    /* Gateway time */
-    char YY[3], MM[3], DD[3], hh[3], mm[3], ss[3];
-    if(timestemp != NULL) {
-      memcpy(YY, timestemp, 2);
-      memcpy(MM, timestemp+2, 2);
-      memcpy(DD, timestemp+4, 2);
-      memcpy(hh, timestemp+6, 2);
-      memcpy(mm, timestemp+8, 2);
-      memcpy(ss, timestemp+10, 2);
-
-      uint32_t result = 0;
-      uint32_t year = ((uint32_t)YY[0] - 0x30) * 10 + (uint32_t)YY[1] - 0x30;
-      uint32_t month = ((uint32_t)MM[0] - 0x30) * 10 + (uint32_t)MM[1] - 0x30;
-      if(month > 12 || month <= 0) result = 1;
-      uint32_t day = ((uint32_t)DD[0] - 0x30) * 10 + (uint32_t)DD[1] - 0x30;
-      if(day > 31 || day <= 0) result = 2;
-      if(month == 2 && day > 29) result = 2;
-
-      uint32_t hour = ((uint32_t)hh[0] - 0x30) * 10 + (uint32_t)hh[1] - 0x30;
-      if(hour > 24 || hour < 0) result = 3;
-      uint32_t minute = ((uint32_t)mm[0] - 0x30) * 10 + (uint32_t)mm[1] - 0x30;
-      if(minute >= 60 || minute < 0) result = 4;
-      uint32_t second = ((uint32_t)ss[0] - 0x30) * 10 + (uint32_t)ss[1] - 0x30;
-      if(second >= 60 || second < 0) result = 5;
-
-      if(result == 0) {
-          if(year >= 30) {
-            DEBUG("Error : Ack's time is over 2030.\r\n");
-          }
-          else {
-            rtc.setTime(hour, minute, second);
-            rtc.setDate(year, month, day);
-            DEBUG("Fix rtc time ok.\r\n");
-          }
-      }
-    }
-  }
-  else {
-    DEBUG("No success response, save in eeprom.\r\n");
-    eeprom_saveData_and_jumpNextPos((uint8_t*)newData);
-  }
-
-  return (funcptr)fsm_sleep;
+  if(exs62_http_send(tempArray, len))   DEBUG("exs62_http_send fail\r\n");
+  return (funcptr)fsm_getResponse;
 }
 
-funcptr catM_getResponse() {
-  char msg[800 + 1] = {0};
-  int len = 0;
-
+funcptr fsm_getResponse() {
   /* If http state is 200 or other */
   int result = exs62_getResponse(5, "^SISR: 6,1");
   if(result) { /* Not 200 */
@@ -799,18 +580,16 @@ funcptr catM_getResponse() {
     else if(result == 422 && checkEEPROM[0] == 0) {
       checkEEPROM[0] = 1;
       parSave(checkEEPROM, 9, 1);
-      DEBUG("Count_422_num = 1\r\n");
     }
     else if(result == 422 && checkEEPROM[0] >= 1) {
-      DEBUG("Get 422 Unprocessable Entity >= 2, reset m4 and clear eeprom\r\n");
+      DEBUG("Get 422 Unprocessable Entity >= 2, clear eeprom after wakeup\r\n");
       checkEEPROM[0] = 1;
       checkEEPROM[1] = 0;
       parSave(checkEEPROM, 8, 2);
       /* 關閉EXS62 */
       if(!exs62_switchOff()) DEBUG("Successful to power off EXS62\r\n");
-      NBIOT_PowerOff();
-      vTaskDelay(pdMS_TO_TICKS(100));
-      NVIC_SystemReset();
+      M1_PowerOff();
+      return (funcptr)fsm_sleep;
     }
 
     //儲存最新一筆資料
@@ -822,7 +601,7 @@ funcptr catM_getResponse() {
 
   /* State 200 */
   DEBUG("Result :OK!\r\n");
-  sendOKFlag = true;
+  LED_SendOK_Flag = true;
   vTaskDelay(pdMS_TO_TICKS(1000));
 
   eeprom_ClearData();
@@ -856,7 +635,6 @@ funcptr catM_getResponse() {
     DEBUG("Change RT from ");DEBUG_uint(pResendTime);
     DEBUG(" to ");DEBUG_uint(getResendTime);DEBUG("\r\n");
     nodeManager_changeResendTime((uint64_t)getResendTime);
-    DEBUG("Now RT = ");DEBUG_uint(pResendTime);DEBUG("\r\n");
   }
 
   /* Gateway time */
@@ -893,136 +671,21 @@ funcptr catM_getResponse() {
 
   /* 關閉連線 */
   if(exs62_closeConnetion())  DEBUG("Close connection fail!\r\n");
-  else                        DEBUG("Close connection OK\r\n");
 
   return (funcptr)fsm_sleep;
 }
 
-funcptr catM_Connect_And_Send() {
-  char tempArray[12000] = {0};
-  int newPayloadLen = sprintf(tempArray, "{\"num\":%lu,\"records\":[%s]}",
-            amountOfData,
-            readySendData
-            );
-
-  // 設定資料長度
-  if(exs62_preparePayload_Connect(newPayloadLen)) DEBUG("AT^SISO=6 fail!\r\n");
-  if(exs62_http_send(tempArray, newPayloadLen))   DEBUG("Send Fail\r\n");
-  else DEBUG("Send OK\r\n");
-
-  return (funcptr)nb_getResponse;
-}
-
 funcptr fsm_sleep() {
+  /* 關閉EXS62 */
+  if(!exs62_switchOff()) DEBUG("Successful to power off EXS62\r\n");
+  M1_PowerOff();
 
-  DEBUG(">>fsm_sleep<<\r\n");
-  dog.reload();
-
-  if(!isCatM) {
-    sara_poweroff();
-  }
-  else {
-    /* 關閉EXS62 */
-    if(!exs62_switchOff()) DEBUG("Successful to power off EXS62\r\n");
-  }
-
-  DEBUG("Sleep time : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("\r\n");
+  DEBUG("Sleep time : ");writeUint32(DEBUG_USART, pResendTime);DEBUG("s\r\n");
   HAL_PWREx_EnterSHUTDOWNMode();
   return 0;
 }
 
-// ------------------ Other task ----------------------------------
-void TaskADC(void * parameter) {
-  for(;;) {
-    uint16_t count = 50;
-    uint16_t rawData [4][count] = {0};
-    float    tempVolt[3]    = {0};           // BAT, Solar, InnerTemp
-    float    fixValue[3]    = {9.633, 9.7, 1};
-    
-    for(uint8_t i = 0; i < count; i++)
-    {   
-        ADC_startConversion();
-        while(LL_DMA_IsActiveFlag_TC1(DMA1) == 0);
-        LL_DMA_ClearFlag_TC1(DMA1);
-
-        rawData[0][i] = adc1DmaBuffer[0];
-        rawData[1][i] = adc1DmaBuffer[1];
-        rawData[2][i] = adc1DmaBuffer[2];
-        /* voltage reference */
-        rawData[3][i] = adc1DmaBuffer[3];
-    }
-
-    /* Calculate the voltage reference */
-    float base = 0;
-    for (uint8_t i = 0; i < count; i++) {
-        base += (float) rawData[3][i];
-    }
-    base /= count;
-    base = (VREFINT_CAL_VREF / 1000) * ((float) *VREFINT_CAL_ADDR / base);
-
-    /* Calculate t1 ~ t3 */
-    float avg;
-    for (uint8_t i = 0; i < 3; i++) {
-        avg = 0;
-        for (uint8_t j = 0; j < count; j++) {
-            avg += (float) rawData[i][j];
-        }
-        avg /= count;
-
-        tempVolt[i] = base * (avg / 4095) * fixValue[i];
-    }
-
-    memset(batV, 0, sizeof(batV));
-    memset(solarV, 0, sizeof(solarV));
-    memset(innerT, 0, sizeof(innerT));
-    //-----------  Votagle  ---------//
-    floatToString(tempVolt[0], batV, 10);
-    floatToString(tempVolt[1], solarV, 10);
-    //-----------Temperature---------//
-    voltToTemperature(tempVolt[2], innerT);
-
-    /* Direct battery voltage, if < 2.8V, just sleep. */
-    writeString(DEBUG_USART,"BatteryV : ");DEBUG(batV);writeString(DEBUG_USART,"\r\n");
-    if (tempVolt[0] < 2.900000 && tempVolt[0] >= 0.00000)
-    {
-
-      writeString(DEBUG_USART,"Keep sleep ...\r\n");
-      HAL_PWREx_EnterSHUTDOWNMode();
-    }
-
-    tempTimestamp = getUnixTimestamp();
-    adc_Flag = true;
-
-    DEBUG("batV   = ");DEBUG(batV);DEBUG("\r\n");
-    DEBUG("solarV = ");DEBUG(solarV);DEBUG("\r\n");
-    DEBUG("innerT = ");DEBUG(innerT);DEBUG("\r\n");
-
-    vTaskDelay(pdMS_TO_TICKS(100000000000));
-  }
-}
-
-
 //-------------------private function------------------------------
-static void voltToTemperature(float tempVolt, char * tempStr)
-{
-  float originV = ADC_calculateTemperature(tempVolt);
-  float tmpVal  = originV;
-  int   tmpInt1 = tmpVal;
-  float tmpFrac = tmpVal - tmpInt1;
-  int   tmpInt2 = std::trunc(tmpFrac * 10);
-  if (tmpInt2 < 0) tmpInt2 *= -1;
-  sprintf (tempStr, "%d.%01d", tmpInt1, tmpInt2);
-}
-
-static void floatToString(float value, char * str, int dot) {
-  float tmpVal = value;
-  int tmpInt1 = tmpVal;
-  float tmpFrac = tmpVal - tmpInt1;
-  int tmpInt2 = std::trunc(tmpFrac * dot);
-
-  sprintf (str, "%d.%d", tmpInt1, tmpInt2);
-}
-
 static void transmitRS485(uint8_t * deviceNumber){
   RS485_Send();
   writeData(USART3, (char *)deviceNumber, 8);
@@ -1043,11 +706,11 @@ static void getRS485Data(char * deviceData, int receiveDataLen){
 
 static void eeprom_ClearData() {
   /* 刪除EEPROM裡的資料 */
-  if(amountOfData > 1) {
+  if(dataPos != 1) {
     uint32_t finalAddr = 0;
-    for(int i = 1; i < dataPos; i++) {
+    for(uint32_t i = 1; i < dataPos; i++) {
       uint32_t addr = eepromFlag.nextSendAddress + (i - 1) * payloadLen;
-      if(addr >= MAX_EEPROM_SIZE) addr = addr - MAX_EEPROM_SIZE + dataFirstAddress;
+      if(addr >= MAX_EEPROM_SIZE) addr = dataFirstAddress;
       parSave(nonData, addr, payloadLen);
       DEBUG("Delete data at : ");writeUint32(DEBUG_USART, addr);DEBUG("\r\n");
       finalAddr = addr + payloadLen;

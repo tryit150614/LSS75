@@ -13,6 +13,8 @@ struct inputString {
   char endMarker;
 };
 
+void ringBuffer_init();
+
 void parseStringInBuffer(struct inputString *strIn, volatile ringBufferStruct *ringBuffer);
 void parseHexInBuffer(struct inputString * strIn, volatile ringBufferStruct * ringBuffer, int len);
 

@@ -37,6 +37,7 @@ int  writeInt(USART_TypeDef * usart, const int n);
 int writeData(USART_TypeDef * usart, const char * s, int dataLen);
 int  writeUint32(USART_TypeDef * usart, const uint32_t n);
 int binaryToString(const char * s, int dataLen, char * payloadOut);
+void floatToString(float value, char * str, int dot);
 
 void DEBUG(const char * s );
 int DEBUG_uint(const uint32_t n);

@@ -18,6 +18,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <math.h>
 #include <stdio.h>
 #include "usart.h"
 #include "inttypes.h"
@@ -429,6 +430,21 @@ int binaryToString(const char * s, int dataLen, char * payloadOut) {
 
   payloadOut[dataLen * 2 + 1] = '\0';
   return i;
+}
+
+void floatToString(float value, char * str, int dot) {
+  float tmpVal = value;
+  int tmpInt1 = tmpVal;
+  float tmpFrac = tmpVal - tmpInt1;
+  int tmpInt2 = trunc(tmpFrac * dot);
+
+  switch(dot) 
+  {
+    case 10  : {sprintf(str, "%d.%01d", tmpInt1, tmpInt2); break;}
+    case 100 : {sprintf(str, "%d.%02d", tmpInt1, tmpInt2); break;}
+    case 1000: {sprintf(str, "%d.%03d", tmpInt1, tmpInt2); break;}
+    default  : {sprintf(str, "%d.%01d", tmpInt1, tmpInt2); break;}
+  }
 }
  
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -4,6 +4,8 @@
 
 #define DMA1_ADC_BUFFER_SIZE 4
 
+#include "stdint.h"
+
 void MX_ADC1_Init(void);
 
 void ADC_enable();
@@ -12,6 +14,10 @@ uint32_t ADC_isInternalRegulatorEnabled();
 uint32_t ADC_isReady();
 void ADC_startConversion();
 float ADC_calculateTemperature(float v0);
+
+void voltToTemperature(float tempVolt, char * tempStr);
+
+void TaskADC(void * parameter);
 
 #endif /*__ adc_H */
 

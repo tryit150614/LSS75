@@ -25,6 +25,12 @@ extern "C" {
 #include "stm32l4xx_ll_rtc.h"
 #include "stm32l4xx_hal_rng.h"
 
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <stdlib.h>
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -82,8 +88,11 @@ void Error_Handler(void);
 #define RS485_Receive()           LL_GPIO_ResetOutputPin(pRS485Switch, ioRS485Switch)
 #define EEPROM_EnableProtect()    LL_GPIO_SetOutputPin(pEEPROMProtect, ioEEPROMProtect)
 #define EEPROM_DisableProtect()   LL_GPIO_ResetOutputPin(pEEPROMProtect, ioEEPROMProtect)
-#define NBIOT_PowerOn()           LL_GPIO_SetOutputPin(pNBIOTPower, ioNBIOTPower)
-#define NBIOT_PowerOff()          LL_GPIO_ResetOutputPin(pNBIOTPower, ioNBIOTPower)
+#define M1_PowerOn()           LL_GPIO_SetOutputPin(pNBIOTPower, ioNBIOTPower)
+#define M1_PowerOff()          LL_GPIO_ResetOutputPin(pNBIOTPower, ioNBIOTPower)
+#define LED_ALL_Toggle()          LL_GPIO_TogglePin(pSendLED, ioSendLED); \
+                                  LL_GPIO_TogglePin(pReceiveLED, ioReceiveLED); \
+                                  LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
 
 #ifdef __cplusplus
 }

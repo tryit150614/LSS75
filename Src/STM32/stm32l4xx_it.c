@@ -11,8 +11,8 @@ unsigned int Usart2StartPos = 0;
 unsigned int Usart3StartPos = 0;
 unsigned int Lpuart1StartPos = 0;
 
-int usart1DataLength = 0;
-int lpuart1DataLength = 0;
+unsigned int usart1DataLength = 0;
+unsigned int lpuart1DataLength = 0;
 /* External variables --------------------------------------------------------*/
 extern volatile ringBufferStruct lpuart1Buf;
 extern volatile ringBufferStruct usart1Buf;

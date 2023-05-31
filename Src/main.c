@@ -1,16 +1,3 @@
-/*-------------------------------------
-version : 1.0.0
-date    : 2020/12/07
-RD      : Sean
-
-SD card version
---------------------------------------*/
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <stdlib.h>
-
 #include "main.h"
 #include "st_watchdog.h"
 #include "cmsis_os.h"
@@ -23,66 +10,28 @@ SD card version
 #include "adc.h"
 #include "fsm.h"
 #include "eeprom.h"
+#include "Cli.h"
+#include "gpio.h"
+#include "dma.h"
 
 extern struct FSMAttributes fsmAttributes;
+extern Watchdog watchdog;
+extern Rtc      rtc;
+extern EEPROMFlag eepromFlag;
 
-const unsigned int lpuart1DataSize = 800;
-uint8_t lpuart1Data[lpuart1DataSize];
-volatile ringBufferStruct lpuart1Buf;
-extern struct inputString inputStringLpuart1;
-extern int lpuart1DataLength;
-
-const unsigned int usart1DataSize = 800;
-uint8_t usart1Data[usart1DataSize];
-volatile ringBufferStruct usart1Buf;
-extern struct inputString inputStringUsart1;
-
-const unsigned int uart4DataSize = 240;
-uint8_t uart4Data[uart4DataSize];
-volatile ringBufferStruct uart4Buf;
-extern struct inputString inputStringUart4;
-
-const unsigned int usart2DataSize = 200;
-uint8_t usart2Data[usart2DataSize];
-volatile ringBufferStruct usart2Buf;
-extern struct inputString inputStringUsart2;
-
-const unsigned int usart3DataSize = 200;
-uint8_t usart3Data[usart3DataSize];
-volatile ringBufferStruct usart3Buf;
-
+/* Read from flash */
 volatile uint32_t pResendTime = 0;
 volatile uint32_t pMAC = 0;
 char pHash[9] = {0};
 char pHttpAddr[100] = "http://yummy.agriweather.online/api/6th-nbiot";
 
 bool reset_Flag = false;
-bool adc_Flag   = false;
-/* LED flag */
-volatile bool rs485Flag    = false;
-volatile bool moduleFlag   = false;
-volatile bool sendOKFlag   = false;
-/*----------*/
-
-/* Private variables ---------------------------------------------------------*/
-extern Watchdog watchdog;
-extern Rtc      rtc;
-extern EEPROMFlag eepromFlag;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 
-void MX_DMA_Init(void);
-void MX_GPIO_Init(void);
 void TaskSystem(void * parameter);
-void TaskFSM(void *pvParameters);
-void TaskCLI(void *pvParameters);
 void TaskLED(void *pvParameters);
-void vSendCmd(void *pvParameters);
-void vGetNBIotData(void *pvParameters);
-
-uint32_t month2day(uint32_t month);
 
 int main(void)
 {
@@ -101,15 +50,7 @@ int main(void)
   MX_I2C4_Init();
 
   rtc.init();
-
-  ringBuffer_new(&lpuart1Buf, lpuart1Data, lpuart1DataSize);
-  ringBuffer_new(&usart1Buf, usart1Data, usart1DataSize);
-  ringBuffer_new(&uart4Buf, uart4Data, uart4DataSize);
-  ringBuffer_new(&usart2Buf, usart2Data, usart2DataSize);
-  ringBuffer_new(&usart3Buf, usart3Data, usart3DataSize);
-
-  EEPROM_EnableProtect();
-
+  ringBuffer_init(); /* 初始化各USART的Buffer */
   MX_ADC1_Init();
   fsm_init();
 
@@ -147,14 +88,10 @@ int main(void)
 
   if(flashRead(FLASH_FLAG_START_ADDR) != 0)
   {
-    writeString(DEBUG_USART, "----------- init -----------\r\n");
-    Lora_Send_Toggle();
-    Lora_Receive_Toggle();
-    powerLED_Toggle();
+    DEBUG("----------- init -----------\r\n");
+    LED_ALL_Toggle();
     clearAllDataInEEPROM();
-    Lora_Send_Toggle();
-    Lora_Receive_Toggle();
-    powerLED_Toggle();
+    LED_ALL_Toggle();
     nodeManager_initFlashData();
   }
 
@@ -172,7 +109,7 @@ int main(void)
   DEBUG("Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);DEBUG("\r\n");
   DEBUG("Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);DEBUG("\r\n");
 
-  DEBUG("FD Version 1.4.7 2023/05/16\r\n");
+  DEBUG("FD Version 1.4.8 2023/05/31\r\n");
   DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */
@@ -186,175 +123,10 @@ int main(void)
   }
 }
 
-void MX_DMA_Init(void) 
-{
-  /* DMA controller clock enable */
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2);
-}
-
-void MX_GPIO_Init(void)
-{
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* GPIO Ports Clock Enable */
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOH);
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
-
-  /* RS485 switch (origin is PB12) */
-  GPIO_InitStruct.Pin = ioRS485Switch;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
-  LL_GPIO_Init(pRS485Switch, &GPIO_InitStruct);
-
-  /* Power LED */
-  GPIO_InitStruct.Pin = ioPowerLED;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  LL_GPIO_Init(pPowerLED, &GPIO_InitStruct);
-
-  /* Receive LED */
-  GPIO_InitStruct.Pin = ioReceiveLED;
-  LL_GPIO_Init(pReceiveLED, &GPIO_InitStruct);
-
-  /* Send LED */
-  GPIO_InitStruct.Pin = ioSendLED;
-  LL_GPIO_Init(pSendLED, &GPIO_InitStruct);
-
-  /* Lora power */
-  GPIO_InitStruct.Pin = ioLoraPower;
-  LL_GPIO_Init(pLoraPower, &GPIO_InitStruct);
-
-  /* RS485 IC power */
-  GPIO_InitStruct.Pin = ioRS485ICPower;
-  LL_GPIO_Init(pRS485ICPower, &GPIO_InitStruct);
-
-  /* RS485 sensor power */
-  GPIO_InitStruct.Pin = ioRS485SensorPower;
-  LL_GPIO_Init(pRS485SensorPower, &GPIO_InitStruct);
-
-  /* NBIOT power */
-  GPIO_InitStruct.Pin = ioNBIOTPower;
-  LL_GPIO_Init(pNBIOTPower, &GPIO_InitStruct);
-  NBIOT_PowerOff();
-
-  /* NBIOT PWR-ON */
-  GPIO_InitStruct.Pin = ioNBIOT_PWR;
-  LL_GPIO_Init(pNBIOT_PWR, &GPIO_InitStruct);
-  LL_GPIO_SetOutputPin(pNBIOT_PWR, ioNBIOT_PWR);
-
-  /* I2C protect pin */
-  GPIO_InitStruct.Pin = ioEEPROMProtect;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(pEEPROMProtect, &GPIO_InitStruct);
-
-  /* NBIOT V-INT */
-  GPIO_InitStruct.Pin = ioNBIOT_VINT;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
-  LL_GPIO_Init(pNBIOT_VINT, &GPIO_InitStruct);
-
-  // /* Detect ublox or EXS62 (old : NBIOT RESET-N) */
-  // GPIO_InitStruct.Pin = ioDetectModule;
-  // LL_GPIO_Init(pDetectModule, &GPIO_InitStruct);
-}
-
 void TaskSystem(void * parameter) {
   for(;;) {
     watchdog.reload();
-    // vTaskDelay(pdMS_TO_TICKS(5));
-    // LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
-    // LL_GPIO_TogglePin(pPowerLED, ioPowerLED);
     vTaskDelay(pdMS_TO_TICKS(995));
-  }
-}
-
-void TaskFSM(void *pvParameters) {
-  for (;;) {
-      if(!adc_Flag) vTaskDelay(pdMS_TO_TICKS(100));
-      fsmAttributes.state = (StateFunc)(*fsmAttributes.state)();
-  }
-}
-
-void TaskCLI(void *pvParameters) {
-  for (;;) {
-      parseStringInBuffer(&inputStringUart4, &uart4Buf);
-      if (inputStringUart4.ready == 1) {
-          inputStringUart4.ready = 0;
-          /* $00011FWzw5ad6 */
-          if(inputStringUart4.string[0] == '$') {
-              char macStr[6] = {0};
-              memcpy(macStr, inputStringUart4.string + 1, 5);
-              memcpy(pHash, inputStringUart4.string + 6, 8);
-              uint32_t mac = strtol(macStr, NULL, 10);
-              DEBUG("******* Change MAC to ");
-              writeUint32(DEBUG_USART, mac);
-              DEBUG(" *******\r\n");
-              DEBUG("******* Change hash to ");
-              DEBUG(pHash);
-              DEBUG(" *******\r\n");
-
-              nodeManager_modifyMAC(mac);
-              nodeManager_modifyHash(pHash);
-          }
-      }
-
-      vTaskDelay(pdMS_TO_TICKS(10));
-  }
-}
-
-/*
-rs485Flag  : 有資料才亮Receive燈, 亮0.2秒
-moduleFlag : 有^SYSSTART才亮Send燈(CatM only), 亮0.2秒
-sendOKFlag : 亮Receive and Send燈, 亮1秒 
-*/
-void TaskLED(void *pvParameters) {
-  for(;;) {
-    if(adc_Flag) {
-      LL_GPIO_SetOutputPin(pPowerLED, ioPowerLED);
-      if(rs485Flag || sendOKFlag)   LL_GPIO_SetOutputPin( pReceiveLED, ioReceiveLED);
-      if(moduleFlag)  LL_GPIO_SetOutputPin( pSendLED, ioSendLED);
-
-      if(sendOKFlag)  {vTaskDelay(pdMS_TO_TICKS(1000)); sendOKFlag = false;}
-      else            vTaskDelay(pdMS_TO_TICKS(10));
-
-      LL_GPIO_ResetOutputPin( pPowerLED, ioPowerLED);
-      LL_GPIO_ResetOutputPin( pReceiveLED, ioReceiveLED);
-      LL_GPIO_ResetOutputPin( pSendLED, ioSendLED);
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(990));
-  }
-}
-
-void vSendCmd(void *pvParameters) {
-  for(;;) {
-    vTaskDelay(pdMS_TO_TICKS(1));
-    parseStringInBuffer(&inputStringUsart2, &usart2Buf);
-    if (inputStringUsart2.ready == 1) {
-      inputStringUsart2.ready = 0;
-      writeString(LPUART1, inputStringUsart2.string);
-    }
-  }
-}
-
-void vGetNBIotData(void *pvParameters) {
-  int len = 0;
-  for(;;) {
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    len = lpuart1DataLength;
-    receiveBinaryInBuffer(&inputStringLpuart1, &lpuart1Buf);
-    if (inputStringLpuart1.ready == 1) {
-      inputStringLpuart1.ready = 0;
-      writeString(DEBUG_USART, "-----------------Task------------------\r\n");
-      writeData(DEBUG_USART, inputStringLpuart1.string, len);
-      writeString(DEBUG_USART, "\r\n-----------------------------------\r\n");
-    }
   }
 }
 
@@ -429,7 +201,6 @@ void SystemClock_Config(void)
   LL_RCC_SetUARTClockSource(LL_RCC_UART4_CLKSOURCE_PCLK1);
   LL_RCC_SetLPUARTClockSource(LL_RCC_LPUART1_CLKSOURCE_PCLK1);
   LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSOURCE_PLLSAI1);
-  LL_RCC_SetRNGClockSource(LL_RCC_RNG_CLKSOURCE);
   LL_RCC_SetI2CClockSource(LL_RCC_I2C4_CLKSOURCE_PCLK1);
 }
 

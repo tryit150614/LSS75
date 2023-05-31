@@ -1,12 +1,13 @@
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l4xx_ll_adc.h"
-#include "stm32l4xx_ll_gpio.h"
-#include "stm32l4xx_ll_bus.h"
-#include "stm32l4xx_ll_dma.h"
 #include "adc.h"
-#include <math.h>
+#include "main.h"
+#include "cmsis_os.h"
+#include "usart.h"
+#include "math.h"
 
 uint16_t adc1DmaBuffer[DMA1_ADC_BUFFER_SIZE] = {0};
+char batV[10] = {0}, solarV[10]   = {0}, innerT[10] = {0};
+bool adc_Flag = false;
 
 void MX_ADC1_Init(void)
 {
@@ -102,8 +103,6 @@ while(LL_ADC_IsActiveFlag_ADRDY(ADC1) == 0);
   LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_VREFINT, LL_ADC_SINGLE_ENDED);
 }
 
-
-
 void ADC_startConversion() {
   LL_ADC_REG_StartConversion(ADC1);
 }
@@ -139,4 +138,83 @@ float ADC_calculateTemperature(float v0){
 
 
   return (1 / t0) - 273.15;
+}
+
+void voltToTemperature(float tempVolt, char * tempStr)
+{
+  float originV = ADC_calculateTemperature(tempVolt);
+  float tmpVal  = originV;
+  int   tmpInt1 = tmpVal;
+  float tmpFrac = tmpVal - tmpInt1;
+  int   tmpInt2 = std::trunc(tmpFrac * 10);
+  if (tmpInt2 < 0) tmpInt2 *= -1;
+  sprintf (tempStr, "%d.%01d", tmpInt1, tmpInt2);
+}
+
+void TaskADC(void * parameter) {
+  for(;;) {
+    uint16_t count = 50;
+    uint16_t rawData [4][count] = {0};
+    float    tempVolt[3]    = {0};           // BAT, Solar, InnerTemp
+    float    fixValue[3]    = {9.633, 9.7, 1};
+    
+    for(uint8_t i = 0; i < count; i++)
+    {   
+        ADC_startConversion();
+        while(LL_DMA_IsActiveFlag_TC1(DMA1) == 0);
+        LL_DMA_ClearFlag_TC1(DMA1);
+
+        rawData[0][i] = adc1DmaBuffer[0];
+        rawData[1][i] = adc1DmaBuffer[1];
+        rawData[2][i] = adc1DmaBuffer[2];
+        /* voltage reference */
+        rawData[3][i] = adc1DmaBuffer[3];
+    }
+
+    /* Calculate the voltage reference */
+    float base = 0;
+    for (uint8_t i = 0; i < count; i++) {
+        base += (float) rawData[3][i];
+    }
+    base /= count;
+    base = (VREFINT_CAL_VREF / 1000) * ((float) *VREFINT_CAL_ADDR / base);
+
+    /* Calculate t1 ~ t3 */
+    float avg;
+    for (uint8_t i = 0; i < 3; i++) {
+        avg = 0;
+        for (uint8_t j = 0; j < count; j++) {
+            avg += (float) rawData[i][j];
+        }
+        avg /= count;
+
+        tempVolt[i] = base * (avg / 4095) * fixValue[i];
+    }
+
+    memset(batV, 0, sizeof(batV));
+    memset(solarV, 0, sizeof(solarV));
+    memset(innerT, 0, sizeof(innerT));
+    //-----------  Votagle  ---------//
+    floatToString(tempVolt[0], batV, 10);
+    floatToString(tempVolt[1], solarV, 10);
+    //-----------Temperature---------//
+    voltToTemperature(tempVolt[2], innerT);
+
+    /* Direct battery voltage, if < 2.8V, just sleep. */
+    writeString(DEBUG_USART,"BatteryV : ");DEBUG(batV);writeString(DEBUG_USART,"\r\n");
+    if (tempVolt[0] < 2.900000 && tempVolt[0] >= 0.00000)
+    {
+
+      writeString(DEBUG_USART,"Keep sleep ...\r\n");
+      HAL_PWREx_EnterSHUTDOWNMode();
+    }
+
+    adc_Flag = true;
+
+    DEBUG("batV   = ");DEBUG(batV);DEBUG("\r\n");
+    DEBUG("solarV = ");DEBUG(solarV);DEBUG("\r\n");
+    DEBUG("innerT = ");DEBUG(innerT);DEBUG("\r\n");
+
+    vTaskDelay(pdMS_TO_TICKS(100000000000));
+  }
 }

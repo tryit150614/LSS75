@@ -127,12 +127,10 @@ void changeSaveAddress(uint16_t newAddress) {
     }
     parSave(temp, 0, 4);
     eepromFlag.nextSaveAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
-    DEBUG("Next save address change to ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);DEBUG("\r\n");
 }
 
 void changeSendAddress(uint16_t newAddress) {
     uint16_t dataCount = newAddress / payloadLen;
-    // writeString(DEBUG_USART, "dataCount = ");writeUint32(DEBUG_USART, dataCount);writeString(DEBUG_USART, "\r\n");
     if(dataCount >= (MAX_EEPROM_SIZE / payloadLen)) dataCount = dataFirstAddress / payloadLen;
     uint8_t temp[4+1] = {0};
     if (dataCount < 250) 
@@ -168,7 +166,6 @@ void changeSendAddress(uint16_t newAddress) {
     }
     parSave(temp, 4, 4);
     eepromFlag.nextSendAddress = (uint16_t)((temp[0] + temp[1] + temp[2] + temp[3]) * payloadLen);
-    DEBUG("Next send address change to ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);DEBUG("\r\n");
 }
 
 void clearAllDataInEEPROM() {

@@ -18,9 +18,9 @@ int dbg_exs62_getResponse(int sec, const char* target);
 int exs62_ready()
 {
     /* Wait module ready */
-    if(exs62_getResponse(15, "SYSSTART")) return 0;
+    if(exs62_getResponse(15, "SYSSTART")) return 1;
 
-    return 1;
+    return 0;
 }
 
 int exs62_switchOff()
@@ -98,7 +98,7 @@ int exs62_connectNetwork() {
     return 0;
 }
 
-void sendCmd(char * str)
+void sendCmd(const char * str)
 {
     writeString(LPUART1, str);
 }
@@ -107,7 +107,7 @@ void sendCmd(char * str)
 return 0 : OK
        1 : Fail
 */
-int exs62_getResponse(int sec, char* target)
+int exs62_getResponse(int sec, const char* target)
 {
     uint32_t start = HAL_GetTick();
     uint32_t current = HAL_GetTick();
@@ -223,9 +223,9 @@ int exs62_http_send(char *payload, uint32_t payloadlen) {
   return 0;
 }
 
-void exs62_getRSSI(char * out) {
+int exs62_getRSSI(char * out) {
   sendCmd("AT^SMONI\r\n");
-  if(!exs62_getResponse(2, "^SMONI:")) {
+  if(!exs62_getResponse(1, "CONN,")) {
     // RSRP於第12格
     char *str;
     strtok(inputStringLpuart1.string, ",");
@@ -242,11 +242,10 @@ void exs62_getRSSI(char * out) {
     str = strtok(nullptr, ",");
 
     memcpy(out, str, strnlen(str, 4));
-  } else {
-    DEBUG("Fail to get RSSI\r\n");
-    memset(out, 0, sizeof(out));
-    out[0] = '0';
-  }
+    return 0;
+  } 
+  else 
+    return 1;
 }
 
 int dbg_exs62_getResponse(int sec, const char* target)
