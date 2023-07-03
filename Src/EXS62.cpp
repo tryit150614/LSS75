@@ -20,6 +20,13 @@ int exs62_ready()
     /* Wait module ready */
     if(exs62_getResponse(15, "SYSSTART")) return 1;
 
+    /* 顯示詳細錯誤訊息 */
+    sendCmd("AT+CMEE=2\r\n");
+    exs62_getResponse(2, "OK");
+    /* 顯示模組版本 */
+    sendCmd("ATI1\r\n");
+    exs62_getResponse(2, "OK");
+
     return 0;
 }
 

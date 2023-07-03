@@ -109,7 +109,7 @@ int main(void)
   DEBUG("Save address : ");writeUint32(DEBUG_USART, eepromFlag.nextSaveAddress);DEBUG("\r\n");
   DEBUG("Send address : ");writeUint32(DEBUG_USART, eepromFlag.nextSendAddress);DEBUG("\r\n");
 
-  DEBUG("FD Version 1.4.8 2023/05/31\r\n");
+  DEBUG("2023/07/03 FD ver 2.0.0\r\n");
   DEBUG("-----------------------------------\r\n");
 
   /* Start scheduler */
